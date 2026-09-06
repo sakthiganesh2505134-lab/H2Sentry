@@ -1,0 +1,17 @@
+{
+  "short_name": "H2Sentry",
+  "name": "H2Sentry — Passive Exposure Intelligence",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "192x192 512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#0c0f17",
+  "theme_color": "#0c0f17",
+  "display": "standalone",
+  "orientation": "portrait",
+  "description": "Passive cumulative H2S exposure dosimeter system combining colorimetric wristbands with smartphone computer vision."
+}

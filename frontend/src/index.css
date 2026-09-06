@@ -1,0 +1,90 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-figma-bg text-figma-textPrimary font-sans antialiased selection:bg-figma-accent selection:text-black;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+}
+
+/* Custom Figma Industrial Cards & Panels */
+.figma-card {
+  @apply bg-figma-surface border border-figma-border rounded-xl shadow-lg;
+}
+
+.figma-card-inner {
+  @apply bg-figma-card border border-figma-border/70 rounded-lg;
+}
+
+.figma-button-primary {
+  @apply bg-figma-accent hover:bg-figma-accentHover text-black font-semibold rounded-lg shadow-md shadow-figma-accent/20 transition-all transform active:scale-[0.98] flex items-center justify-center;
+}
+
+.figma-button-secondary {
+  @apply bg-figma-card hover:bg-figma-cardHover text-figma-textPrimary border border-figma-border font-medium rounded-lg transition-all active:scale-[0.98] flex items-center justify-center;
+}
+
+.figma-button-danger {
+  @apply bg-figma-danger hover:bg-red-600 text-white font-semibold rounded-lg shadow-md shadow-figma-danger/20 transition-all active:scale-[0.98] flex items-center justify-center;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0B0F17;
+}
+::-webkit-scrollbar-thumb {
+  background: #243047;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #324260;
+}
+
+/* Reticle Corner Guides */
+.reticle-corner-tl {
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  width: 24px;
+  height: 24px;
+  border-top: 3px solid #F59E0B;
+  border-left: 3px solid #F59E0B;
+  border-top-left-radius: 12px;
+}
+.reticle-corner-tr {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 24px;
+  height: 24px;
+  border-top: 3px solid #F59E0B;
+  border-right: 3px solid #F59E0B;
+  border-top-right-radius: 12px;
+}
+.reticle-corner-bl {
+  position: absolute;
+  bottom: -2px;
+  left: -2px;
+  width: 24px;
+  height: 24px;
+  border-bottom: 3px solid #F59E0B;
+  border-left: 3px solid #F59E0B;
+  border-bottom-left-radius: 12px;
+}
+.reticle-corner-br {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 24px;
+  height: 24px;
+  border-bottom: 3px solid #F59E0B;
+  border-right: 3px solid #F59E0B;
+  border-bottom-right-radius: 12px;
+}
