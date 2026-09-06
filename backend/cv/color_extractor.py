@@ -1,15 +1,16 @@
 """
 H2Sentry Color Extraction & Feature Generation Engine
 Extracts region-level optical features from:
-1. H2S Reaction Chemical Exposure Strip
+1. H2S Reaction Chemical Exposure Strip (Robust Interior Statistical Sampling)
 2. Shelf-Life Expiry Indicator
 
 Features:
-- Calibrated Mean & Median RGB
+- Robust Interior Sampling (excludes border adhesive, glare hotspots, deep shadows)
+- Calibrated Mean & Median RGB (Trimmed distributions)
 - HSV Color Space (Hue, Saturation, Value)
-- CIE 1976 L*a*b* Perceptual Color Space
-- Delta-E (ΔE) Color Distance from Unexposed Baseline
-- Spatial Uniformity & Noise Metric
+- CIE 1976 L*a*b* Perceptual Color Space (D65 White Point)
+- Delta-E (ΔE*ab) Color Distance from Unexposed Baseline
+- Spatial Uniformity & Signal-to-Noise Metric
 - Expiry Reagent State Classification
 """
 
@@ -18,7 +19,7 @@ import numpy as np
 from typing import Dict, Any, Tuple, List, Optional
 from backend.cv.calibrator import ReferenceCalibrationResult
 
-# Standard unexposed baseline blank strip color in CIE Lab space
+# Standard unexposed baseline blank substrate color in CIE Lab space
 UNEXPOSED_BASELINE_LAB = np.array([96.0, 0.5, 9.0]) # Light cream substrate
 UNEXPOSED_BASELINE_RGB = np.array([245.0, 240.0, 222.0])
 
@@ -66,12 +67,51 @@ def compute_delta_e_cielab(lab1: Tuple[float, float, float], lab2: Tuple[float, 
     db = lab1[2] - lab2[2]
     return round(float(np.sqrt(dL**2 + da**2 + db**2)), 2)
 
+def extract_strip_interior_stats(roi: np.ndarray) -> Tuple[float, float, float, float, float, float]:
+    """
+    Extracts trimmed-mean / median statistics from a rectangular interior strip ROI,
+    filtering out top/bottom glare highlights (top 5% luminance) and extreme shadows (bottom 5%).
+    Returns (raw_b, raw_g, raw_r, std_b, std_g, std_r).
+    """
+    if roi is None or roi.size == 0:
+        return (0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+
+    # Flatten pixels
+    b_flat = roi[:, :, 0].astype(np.float32).flatten()
+    g_flat = roi[:, :, 1].astype(np.float32).flatten()
+    r_flat = roi[:, :, 2].astype(np.float32).flatten()
+    
+    lum = 0.299 * r_flat + 0.587 * g_flat + 0.114 * b_flat
+    
+    # Exclude glare (> 95th percentile luminance) and deep edge shadows (< 5th percentile)
+    p5 = np.percentile(lum, 5)
+    p95 = np.percentile(lum, 95)
+    valid_mask = (lum >= p5) & (lum <= p95)
+    
+    if np.sum(valid_mask) > 10:
+        b_clean = b_flat[valid_mask]
+        g_clean = g_flat[valid_mask]
+        r_clean = r_flat[valid_mask]
+    else:
+        b_clean, g_clean, r_clean = b_flat, g_flat, r_flat
+        
+    med_b = float(np.median(b_clean))
+    med_g = float(np.median(g_clean))
+    med_r = float(np.median(r_clean))
+    
+    std_b = float(np.std(b_clean))
+    std_g = float(np.std(g_clean))
+    std_r = float(np.std(r_clean))
+    
+    return (med_b, med_g, med_r, std_b, std_g, std_r)
+
 def extract_strip_color_features(
     strip_crop: np.ndarray,
     calibrator: ReferenceCalibrationResult
 ) -> Dict[str, Any]:
     """
-    Extracts calibrated statistical color features from the reaction strip ROI.
+    Extracts calibrated statistical color features from the interior of the reaction strip ROI.
+    Avoids borders and edges that may contain printing, adhesive, or background contamination.
     """
     if strip_crop is None or strip_crop.size == 0:
         return {
@@ -82,53 +122,49 @@ def extract_strip_color_features(
     sh, sw = strip_crop.shape[:2]
     aspect = sw / max(1, sh)
     
+    # 1. Interior Region Sampling (trim top/bottom borders by 20% to eliminate adhesive/substrate bleed)
+    y_min = int(sh * 0.20)
+    y_max = int(sh * 0.80)
+    
     if aspect > 2.5:
-        # Elongated physical strip: sample along horizontal segments and find the active reacted chemical zone
+        # Elongated horizontal strip: evaluate multiple segments to isolate the active chemical exposure zone
         num_slices = 5
         slice_w = sw // num_slices
         slices = []
         for i in range(num_slices):
-            s_roi = strip_crop[int(sh * 0.15):int(sh * 0.85), i * slice_w:(i + 1) * slice_w]
+            # Avoid horizontal outer edges on leftmost / rightmost slices
+            x_left = i * slice_w
+            x_right = (i + 1) * slice_w
+            if i == 0:
+                x_left = int(x_left + slice_w * 0.15)
+            if i == num_slices - 1:
+                x_right = int(x_right - slice_w * 0.15)
+
+            s_roi = strip_crop[y_min:y_max, x_left:x_right]
             if s_roi.size > 0:
-                med_b = float(np.median(s_roi[:, :, 0]))
-                med_g = float(np.median(s_roi[:, :, 1]))
-                med_r = float(np.median(s_roi[:, :, 2]))
-                # Darkness metric / reaction progression
+                med_b, med_g, med_r, std_b, std_g, std_r = extract_strip_interior_stats(s_roi)
                 darkness = med_r + med_g + med_b
-                slices.append((darkness, s_roi, med_b, med_g, med_r))
+                slices.append((darkness, s_roi, med_b, med_g, med_r, std_b, std_g, std_r))
         
         if slices:
-            # Pick the segment with greatest chemical reaction / lowest luminance
+            # Select the segment representing the active reacted zone (lowest luminance / highest chemical darkening)
             best_slice = min(slices, key=lambda s: s[0])
-            roi = best_slice[1]
             raw_b_med = best_slice[2]
             raw_g_med = best_slice[3]
             raw_r_med = best_slice[4]
-            raw_r_std = float(np.std(roi[:, :, 2]))
-            raw_g_std = float(np.std(roi[:, :, 1]))
-            raw_b_std = float(np.std(roi[:, :, 0]))
+            raw_b_std = best_slice[5]
+            raw_g_std = best_slice[6]
+            raw_r_std = best_slice[7]
         else:
-            roi = strip_crop[int(sh * 0.20):int(sh * 0.80), int(sw * 0.20):int(sw * 0.80)]
-            raw_b_med = float(np.median(roi[:, :, 0]))
-            raw_g_med = float(np.median(roi[:, :, 1]))
-            raw_r_med = float(np.median(roi[:, :, 2]))
-            raw_r_std = float(np.std(roi[:, :, 2]))
-            raw_g_std = float(np.std(roi[:, :, 1]))
-            raw_b_std = float(np.std(roi[:, :, 0]))
+            roi = strip_crop[y_min:y_max, int(sw * 0.20):int(sw * 0.80)]
+            raw_b_med, raw_g_med, raw_r_med, raw_b_std, raw_g_std, raw_r_std = extract_strip_interior_stats(roi)
     else:
-        # Central 60% sample for compact badge reaction wells
-        cy_start, cy_end = int(sh * 0.20), int(sh * 0.80)
+        # Central interior 60% window
         cx_start, cx_end = int(sw * 0.20), int(sw * 0.80)
-        roi = strip_crop[cy_start:cy_end, cx_start:cx_end]
-        
-        raw_b_med = float(np.median(roi[:, :, 0]))
-        raw_g_med = float(np.median(roi[:, :, 1]))
-        raw_r_med = float(np.median(roi[:, :, 2]))
-        raw_r_std = float(np.std(roi[:, :, 2]))
-        raw_g_std = float(np.std(roi[:, :, 1]))
-        raw_b_std = float(np.std(roi[:, :, 0]))
+        roi = strip_crop[y_min:y_max, cx_start:cx_end]
+        raw_b_med, raw_g_med, raw_r_med, raw_b_std, raw_g_std, raw_r_std = extract_strip_interior_stats(roi)
     
-    # 2. Lighting-Calibrated RGB
+    # 2. Lighting-Calibrated RGB (using reference matrix)
     cal_r, cal_g, cal_b = calibrator.calibrate_color_rgb((raw_b_med, raw_g_med, raw_r_med))
     
     # 3. HSV Representation
@@ -153,7 +189,7 @@ def extract_strip_color_features(
     if not has_chemical_membrane:
         return {
             "success": False,
-            "error": "Chemical reaction strip not detected in reaction well."
+            "error": "Chemical reaction strip not detected or unreadable."
         }
     
     return {
@@ -210,16 +246,10 @@ def evaluate_expiry_indicator(
     cx_start, cx_end = int(ew * 0.30), int(ew * 0.70)
     roi = expiry_crop[cy_start:cy_end, cx_start:cx_end]
     
-    raw_b = float(np.median(roi[:, :, 0]))
-    raw_g = float(np.median(roi[:, :, 1]))
-    raw_r = float(np.median(roi[:, :, 2]))
-    
+    raw_b, raw_g, raw_r, _, _, _ = extract_strip_interior_stats(roi)
     cal_r, cal_g, cal_b = calibrator.calibrate_color_rgb((raw_b, raw_g, raw_r))
     
     # Calculate dominant chromatic properties
-    # Green dominance -> VALID
-    # Red dominance -> EXPIRED
-    # Amber/Yellow balance -> EXPIRING_SOON
     if cal_g > (cal_r + 30.0) and cal_g > (cal_b + 30.0):
         status = "VALID"
         confidence = 0.96
@@ -233,7 +263,6 @@ def evaluate_expiry_indicator(
         confidence = 0.88
         desc = "Dosimeter is EXPIRING SOON. Schedule badge replacement."
     else:
-        # Default fallback based on ratio
         if cal_g >= cal_r:
             status = "VALID"
             confidence = 0.85

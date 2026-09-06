@@ -1,10 +1,12 @@
 """
 Unit & Integration Tests for H2Sentry CV Pipeline
 Tests:
-- Quality validation
-- Region detection
-- Color extraction
-- Exposure dose calculation
+- Rectangular strip detection & candidate scoring (aspect ratio 3:1 - 12:1)
+- Square QR-like candidate rejection
+- Quality validation (blur, poor lighting, glare)
+- Reference scale + reaction strip dual-region detection
+- Color extraction with interior statistics
+- Quantitative exposure calculation (ppm·min)
 - Confidence scoring
 - Expiry states
 """
@@ -14,6 +16,7 @@ import os
 import cv2
 import numpy as np
 from backend.cv.pipeline import run_dosimeter_analysis_pipeline
+from backend.cv.detector import score_strip_candidate, detect_badge_regions
 from backend.cv.badge_generator import generate_badge_image
 
 @pytest.fixture
@@ -43,6 +46,7 @@ def test_clean_badge_analysis(clean_badge_img):
     assert res["expiry"]["status"] == "VALID"
     assert res["exposure"]["estimated_dose"] < 50.0
     assert res["exposure"]["status"] == "LOW"
+    assert res["exposure"]["unit"] == "ppm·min"
     assert res["confidence"]["confidence"] >= 0.85
 
 def test_moderate_badge_analysis(moderate_badge_img):
@@ -53,6 +57,7 @@ def test_moderate_badge_analysis(moderate_badge_img):
     estimated = res["exposure"]["estimated_dose"]
     assert 600.0 <= estimated <= 900.0
     assert res["exposure"]["status"] in ["LOW", "MODERATE"]
+    assert res["exposure"]["unit"] == "ppm·min"
     assert res["confidence"]["confidence"] >= 0.85
 
 def test_high_badge_analysis(high_badge_img):
@@ -60,21 +65,51 @@ def test_high_badge_analysis(high_badge_img):
     assert res["success"] is True
     assert res["exposure"]["estimated_dose"] >= 1200.0
     assert res["exposure"]["status"] in ["HIGH", "CRITICAL"]
+    assert res["exposure"]["unit"] == "ppm·min"
 
 def test_expired_badge_analysis(expired_badge_img):
     res = run_dosimeter_analysis_pipeline(expired_badge_img)
     assert res["success"] is True
     assert res["expiry"]["status"] == "EXPIRED"
-    # Confidence should be penalized heavily for expired badge
     assert res["confidence"]["confidence"] < 0.40
 
 def test_blurry_badge_analysis(blurry_badge_img):
     res = run_dosimeter_analysis_pipeline(blurry_badge_img)
-    # Blurry image should be strictly rejected without an exposure calculation
     assert res["success"] is False
     assert res["image_quality"]["valid"] is False
     assert res["image_quality"]["metrics"]["blur_variance"] < 35.0
     assert any("blurry" in issue.lower() for issue in res["image_quality"]["issues"])
+    # No fabricated exposure returned on failure
+    assert "exposure" not in res or res["exposure"]["estimated_dose"] == 0.0
+
+def test_poor_lighting_underexposed_rejection():
+    # Severely dark underexposed image (< 30 mean brightness)
+    dark_img = np.full((480, 640, 3), 20, dtype=np.uint8)
+    res = run_dosimeter_analysis_pipeline(dark_img)
+    assert res["success"] is False
+    assert res["image_quality"]["valid"] is False
+    assert any("underexposed" in issue.lower() or "dark" in issue.lower() for issue in res["image_quality"]["issues"])
+
+def test_excessive_glare_rejection():
+    # Image with severe specular blowout (90% white saturated pixels)
+    glare_img = np.full((480, 640, 3), 255, dtype=np.uint8)
+    res = run_dosimeter_analysis_pipeline(glare_img)
+    assert res["success"] is False
+    assert res["image_quality"]["valid"] is False
+
+def test_rectangular_reaction_strip_scoring():
+    # Contour for horizontal strip (w=200, h=40 -> aspect ratio = 5.0)
+    rect_pts = np.array([[[10, 10]], [[210, 10]], [[210, 50]], [[10, 50]]], dtype=np.int32)
+    score_rect, meta_rect = score_strip_candidate(10, 100, 200, 40, ref_y_bottom=80, img_w=640, img_h=480, contour=rect_pts)
+    assert score_rect > 0.70
+    assert meta_rect["aspect"] == 5.0
+
+    # Contour for square QR-like box (w=100, h=100 -> aspect ratio = 1.0)
+    square_pts = np.array([[[10, 10]], [[110, 10]], [[110, 110]], [[10, 110]]], dtype=np.int32)
+    score_sq, meta_sq = score_strip_candidate(10, 100, 100, 100, ref_y_bottom=80, img_w=640, img_h=480, contour=square_pts)
+    # Square candidate should have severely penalized score compared to rectangular strip
+    assert score_sq < 0.45
+    assert score_rect > score_sq
 
 def test_missing_reference_scale_rejection():
     # Plain solid color image with no reference scale
@@ -84,7 +119,6 @@ def test_missing_reference_scale_rejection():
     assert "reference" in res["error"].lower() or "quality" in res["error"].lower()
 
 def test_random_noise_image_rejection():
-    # Random noise image
     noise_img = np.random.randint(0, 255, (480, 640, 3), dtype=np.uint8)
     res = run_dosimeter_analysis_pipeline(noise_img)
     assert res["success"] is False
@@ -139,4 +173,4 @@ def test_pipeline_real_strip_reference_fixture():
     assert est_dose is not None
     assert est_dose > 0.0
     assert abs(est_dose - expected_dose) <= 0.5
-
+    assert res["exposure"]["unit"] == "ppm·min"

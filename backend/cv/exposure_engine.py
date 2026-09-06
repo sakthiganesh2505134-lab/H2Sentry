@@ -4,6 +4,7 @@ Translates calibrated colorimetric features into quantitative cumulative H2S dos
 
 Features:
 - Chemical diffusion-reaction kinetics model: Dose = f(ΔE, L*, Calibrated RGB)
+- Piecewise dynamic interpolation against detected printed reference scale
 - Explicit environmental compensation layer (Temperature & Relative Humidity kinetics)
 - Safety threshold categorization (LOW, MODERATE, HIGH, CRITICAL)
 - Transparent prototype calibration metadata & scientific disclosure
@@ -37,6 +38,7 @@ def estimate_cumulative_dose(
             "unit": "ppm·min",
             "status": "UNKNOWN",
             "status_code": "UNKNOWN",
+            "status_description": "Color feature extraction failed.",
             "equivalent_8h_twa_ppm": 0.0,
             "calibration_version": CALIBRATION_MODEL_VERSION,
             "warnings": ["Color feature extraction failed."],
@@ -119,21 +121,21 @@ def estimate_cumulative_dose(
     if estimated_dose < 300.0:
         status = "LOW"
         status_code = "LOW"
-        status_desc = "Safe occupational range. Cumulative exposure is well within normal shift limits."
+        status_desc = "Occupational reference: Normal. Cumulative exposure is within nominal baseline shift reference."
     elif estimated_dose < 1000.0:
         status = "MODERATE"
         status_code = "MODERATE"
-        status_desc = "Elevated exposure. Review shift tasks and monitor ventilation in work area."
+        status_desc = "Attention required. Elevated cumulative exposure. Review shift tasks and monitor ventilation in work area."
     elif estimated_dose < 2400.0:
         status = "HIGH"
         status_code = "HIGH"
-        status_desc = "Action Level Exceeded (OSHA/MRPL threshold). Industrial hygiene review required."
+        status_desc = "Requires supervisor review. Cumulative exposure exceeds OSHA/MRPL Action Level threshold."
         warnings.append("Cumulative exposure exceeds OSHA/MRPL Action Level threshold.")
     else:
         status = "CRITICAL"
         status_code = "CRITICAL"
-        status_desc = "CRITICAL EXPOSURE WARNING. Immediate medical evaluation and incident report mandatory."
-        warnings.append("DANGER: Critical cumulative H2S threshold breached.")
+        status_desc = "Emergency reference threshold reached. Urgent review and occupational health assessment recommended."
+        warnings.append("Emergency reference: Critical cumulative H2S threshold breached.")
 
     return {
         "estimated_dose": estimated_dose,

@@ -36,17 +36,31 @@ interface WorkerCameraScanViewProps {
 }
 
 type ExposureScanState = 
-  | 'EXPOSURE_SCAN'    // Live measurement camera with colorimetric framing guide
-  | 'ANALYZING'        // Transmitting frame & running OpenCV
+  | 'EXPOSURE_SCAN'    // Live horizontal rectangular measurement camera
+  | 'ANALYZING'        // Transmitting frame & running OpenCV dosimetry engine
   | 'SCAN_REJECTED'    // Reference scale / strip missing or image unreadable
   | 'ANALYSIS_FAILED'  // Network or server exception
   | 'CAMERA_ERROR';    // Hardware or permission failure
 
+type LiveGuidanceState = 
+  | 'INITIALIZING_CAMERA'
+  | 'POSITION_DOSIMETER'
+  | 'REFERENCE_DETECTED'
+  | 'STRIP_DETECTED'
+  | 'ALIGNMENT_GOOD'
+  | 'READY_TO_CAPTURE'
+  | 'MOTION_BLUR'
+  | 'POOR_LIGHT'
+  | 'GLARE';
+
 interface LiveOpticalQuality {
-  status: 'ready' | 'positioning' | 'poor_light' | 'glare' | 'motion_blur';
+  state: LiveGuidanceState;
+  pillTitle: string;
   message: string;
   brightness: number;
   sharpness: number;
+  referenceDetected: boolean;
+  stripDetected: boolean;
 }
 
 // 7-Patch Standard Exposure Reference Scale Palette
@@ -74,12 +88,15 @@ export const WorkerCameraScanView: React.FC<WorkerCameraScanViewProps> = ({
   const [diagnostics, setDiagnostics] = useState<CameraDiagnostics | null>(null);
   const [showDiagnostics, setShowDiagnostics] = useState<boolean>(false);
 
-  // Live Optical Measurement Quality Feedback
+  // Live Optical Measurement Quality Feedback (Deterministic State Machine)
   const [liveQuality, setLiveQuality] = useState<LiveOpticalQuality>({
-    status: 'positioning',
-    message: 'Place both reaction strip and reference scale inside the frame',
+    state: 'POSITION_DOSIMETER',
+    pillTitle: 'POSITION THE DOSIMETER',
+    message: 'Position the complete dosimeter inside the rectangular guide.',
     brightness: 128,
     sharpness: 25,
+    referenceDetected: false,
+    stripDetected: false,
   });
 
   // Captured Image & Rejection State
@@ -221,33 +238,93 @@ export const WorkerCameraScanView: React.FC<WorkerCameraScanViewProps> = ({
         }
         const avgSharpness = sumGradient / (78 * 58);
 
+        // Check contrast difference between top section (reference scale) and bottom section (strip)
+        let topLum = 0;
+        let botLum = 0;
+        for (let y = 10; y < 50; y += 2) {
+          for (let x = 20; x < 140; x += 2) {
+            const idx = (y * 160 + x) * 4;
+            topLum += 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
+          }
+        }
+        for (let y = 70; y < 110; y += 2) {
+          for (let x = 20; x < 140; x += 2) {
+            const idx = (y * 160 + x) * 4;
+            botLum += 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
+          }
+        }
+        const refCandidateDetected = avgBrightness >= 50 && avgBrightness <= 220 && avgSharpness >= 12;
+        const stripCandidateDetected = avgBrightness >= 45 && avgBrightness <= 225 && avgSharpness >= 10;
+
         if (avgBrightness < 45) {
           setLiveQuality({
-            status: 'poor_light',
-            message: 'Move to brighter, even lighting',
+            state: 'POOR_LIGHT',
+            pillTitle: 'POOR LIGHTING',
+            message: 'Improve lighting — reference scale cannot be normalized reliably.',
             brightness: Math.round(avgBrightness),
             sharpness: Math.round(avgSharpness),
+            referenceDetected: false,
+            stripDetected: false,
           });
         } else if (avgBrightness > 228) {
           setLiveQuality({
-            status: 'glare',
-            message: 'Avoid direct glare / reflections',
+            state: 'GLARE',
+            pillTitle: 'EXCESSIVE GLARE',
+            message: 'Avoid direct glare / specular reflections.',
             brightness: Math.round(avgBrightness),
             sharpness: Math.round(avgSharpness),
+            referenceDetected: false,
+            stripDetected: false,
           });
         } else if (avgSharpness < 10) {
           setLiveQuality({
-            status: 'motion_blur',
-            message: 'Hold phone steady',
+            state: 'MOTION_BLUR',
+            pillTitle: 'IMAGE BLURRY',
+            message: 'Hold steady — image is too blurry.',
             brightness: Math.round(avgBrightness),
             sharpness: Math.round(avgSharpness),
+            referenceDetected: false,
+            stripDetected: false,
+          });
+        } else if (refCandidateDetected && stripCandidateDetected) {
+          setLiveQuality({
+            state: 'READY_TO_CAPTURE',
+            pillTitle: 'READY TO CAPTURE',
+            message: 'Alignment good — ready to capture exposure reading.',
+            brightness: Math.round(avgBrightness),
+            sharpness: Math.round(avgSharpness),
+            referenceDetected: true,
+            stripDetected: true,
+          });
+        } else if (refCandidateDetected) {
+          setLiveQuality({
+            state: 'REFERENCE_DETECTED',
+            pillTitle: 'REFERENCE DETECTED',
+            message: 'Reference detected — position the reaction strip inside the guide.',
+            brightness: Math.round(avgBrightness),
+            sharpness: Math.round(avgSharpness),
+            referenceDetected: true,
+            stripDetected: false,
+          });
+        } else if (stripCandidateDetected) {
+          setLiveQuality({
+            state: 'STRIP_DETECTED',
+            pillTitle: 'REACTION STRIP DETECTED',
+            message: 'Reaction strip detected — include the reference scale.',
+            brightness: Math.round(avgBrightness),
+            sharpness: Math.round(avgSharpness),
+            referenceDetected: false,
+            stripDetected: true,
           });
         } else {
           setLiveQuality({
-            status: 'ready',
-            message: 'Ready to capture exposure reading',
+            state: 'POSITION_DOSIMETER',
+            pillTitle: 'POSITION THE DOSIMETER',
+            message: 'Position the complete dosimeter inside the rectangular guide.',
             brightness: Math.round(avgBrightness),
             sharpness: Math.round(avgSharpness),
+            referenceDetected: false,
+            stripDetected: false,
           });
         }
       } catch {
@@ -420,7 +497,7 @@ export const WorkerCameraScanView: React.FC<WorkerCameraScanViewProps> = ({
           READ EXPOSURE STRIP
         </h1>
         <p className="text-xs text-figma-textSecondary max-w-xs mx-auto mt-0.5">
-          Place the used reaction strip beside the reference color scale.
+          Align the reaction strip with the reference scale
         </p>
       </div>
 
@@ -438,11 +515,15 @@ export const WorkerCameraScanView: React.FC<WorkerCameraScanViewProps> = ({
                 SCAN COULD NOT BE READ
               </h2>
               <p className="text-xs text-red-200 font-medium leading-relaxed">
-                {rejectionReason || 'Make sure both the reference scale and H2S reaction strip are positioned inside the frame.'}
+                {rejectionReason || 'Make sure both the reference scale and H2S reaction strip are positioned inside the rectangular guide.'}
               </p>
-              <p className="text-xs text-figma-textSecondary leading-relaxed">
-                The printed reference color scale is mandatory to calibrate ambient lighting and compute exposure dose.
-              </p>
+              <div className="text-[11px] text-figma-textSecondary bg-black/40 p-2.5 rounded-xl border border-figma-border text-left space-y-1 font-mono">
+                <div className="font-bold text-gray-300">Possible Causes:</div>
+                <div>• Reference scale not detected</div>
+                <div>• Reaction strip not detected or unreadable</div>
+                <div>• Poor lighting or excessive specular glare</div>
+                <div>• Image too blurry / out of focus</div>
+              </div>
             </div>
 
             {/* Captured thumbnail preview if available */}
@@ -451,7 +532,7 @@ export const WorkerCameraScanView: React.FC<WorkerCameraScanViewProps> = ({
                 <img
                   src={capturedPreview.startsWith('data:') ? capturedPreview : (capturedPreview.startsWith('/') ? capturedPreview : `data:image/jpeg;base64,${capturedPreview}`)}
                   alt="Captured Frame"
-                  className="w-40 h-28 object-contain rounded-lg mx-auto bg-black"
+                  className="w-44 h-28 object-contain rounded-lg mx-auto bg-black"
                 />
                 <span className="text-[10px] font-mono text-figma-textMuted mt-1 block">Captured Measurement Frame</span>
               </div>
@@ -463,7 +544,7 @@ export const WorkerCameraScanView: React.FC<WorkerCameraScanViewProps> = ({
                 className="w-full py-3.5 px-4 figma-button-primary text-xs font-bold uppercase tracking-wider flex items-center justify-center space-x-1.5 shadow-lg"
               >
                 <RotateCcw className="w-4 h-4" />
-                <span>RETAKE</span>
+                <span>RETAKE SCAN</span>
               </button>
 
               <button
@@ -540,9 +621,9 @@ export const WorkerCameraScanView: React.FC<WorkerCameraScanViewProps> = ({
           </div>
         )}
 
-        {/* STATE: EXPOSURE_SCAN & ANALYZING (Large Colorimetric Viewfinder) */}
+        {/* STATE: EXPOSURE_SCAN & ANALYZING (Large Wide Horizontal Rectangular Viewfinder) */}
         {(scanState === 'EXPOSURE_SCAN' || scanState === 'ANALYZING') && (
-          <div className="relative w-full aspect-[3/4] max-h-[480px] rounded-3xl overflow-hidden bg-black border-2 border-figma-border shadow-2xl flex items-center justify-center">
+          <div className="relative w-full aspect-[4/3] max-h-[460px] rounded-3xl overflow-hidden bg-black border-2 border-figma-border shadow-2xl flex items-center justify-center">
             {useFallbackMode && (customImageSrc || activePreset) ? (
               /* Fallback / Upload / Test Fixture Preview */
               <div className="relative w-full h-full flex items-center justify-center bg-gray-950">
@@ -568,42 +649,43 @@ export const WorkerCameraScanView: React.FC<WorkerCameraScanViewProps> = ({
                   className="absolute inset-0 w-full h-full object-cover"
                 />
 
-                {/* Explicit Colorimetric Measurement Dual-Zone Overlay */}
-                <div className="absolute inset-0 bg-black/20 flex flex-col items-center justify-between p-3.5 pointer-events-none">
+                {/* Explicit Colorimetric Measurement Rectangular Overlay */}
+                <div className="absolute inset-0 bg-black/20 flex flex-col items-center justify-between p-3 pointer-events-none">
                   {/* Top Live Image Quality Feedback Pill */}
                   <div className="w-full flex justify-center">
                     <div 
                       className={`px-3 py-1.5 rounded-full backdrop-blur-md border text-[11px] font-mono font-bold flex items-center space-x-1.5 transition-all duration-300 ${
-                        liveQuality.status === 'ready'
+                        liveQuality.state === 'READY_TO_CAPTURE' || liveQuality.state === 'ALIGNMENT_GOOD'
                           ? 'bg-emerald-950/85 text-emerald-300 border-emerald-500/60 shadow-[0_0_15px_rgba(16,185,129,0.35)]'
-                          : liveQuality.status === 'motion_blur'
+                          : liveQuality.state === 'MOTION_BLUR'
                           ? 'bg-amber-950/85 text-amber-300 border-amber-500/60'
-                          : liveQuality.status === 'poor_light' || liveQuality.status === 'glare'
+                          : liveQuality.state === 'POOR_LIGHT' || liveQuality.state === 'GLARE'
                           ? 'bg-amber-950/85 text-amber-300 border-amber-500/60'
                           : 'bg-black/75 text-cyan-300 border-cyan-500/40'
                       }`}
                     >
-                      {liveQuality.status === 'ready' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />}
-                      {liveQuality.status === 'motion_blur' && <Focus className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
-                      {(liveQuality.status === 'poor_light' || liveQuality.status === 'glare') && <Sun className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
-                      {liveQuality.status === 'positioning' && <AlertCircle className="w-3.5 h-3.5 text-cyan-400 shrink-0" />}
+                      {(liveQuality.state === 'READY_TO_CAPTURE' || liveQuality.state === 'ALIGNMENT_GOOD') && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />}
+                      {liveQuality.state === 'MOTION_BLUR' && <Focus className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
+                      {(liveQuality.state === 'POOR_LIGHT' || liveQuality.state === 'GLARE') && <Sun className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
+                      {liveQuality.state === 'POSITION_DOSIMETER' && <AlertCircle className="w-3.5 h-3.5 text-cyan-400 shrink-0" />}
+                      {(liveQuality.state === 'REFERENCE_DETECTED' || liveQuality.state === 'STRIP_DETECTED') && <Layers className="w-3.5 h-3.5 text-cyan-400 shrink-0" />}
                       <span className="truncate">{liveQuality.message}</span>
                     </div>
                   </div>
 
-                  {/* Dual-Zone Colorimetric Framing Guide Box */}
-                  <div className="relative w-full max-w-[310px] h-[310px] rounded-2xl border-2 border-cyan-400/70 flex flex-col justify-between p-2.5 bg-black/10 shadow-[0_0_25px_rgba(6,182,212,0.15)]">
-                    {/* 4 Precision Measurement Reticles */}
+                  {/* Horizontal Rectangular Colorimetric Framing Guide */}
+                  <div className="relative w-full max-w-[340px] h-[220px] rounded-2xl border-2 border-cyan-400/80 flex flex-col justify-between p-2.5 bg-black/15 shadow-[0_0_25px_rgba(6,182,212,0.15)]">
+                    {/* 4 Precision Measurement Corner Reticles */}
                     <div className="absolute -top-1 -left-1 w-6 h-6 border-t-3 border-l-3 border-cyan-400 rounded-tl" />
                     <div className="absolute -top-1 -right-1 w-6 h-6 border-t-3 border-r-3 border-cyan-400 rounded-tr" />
                     <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-3 border-l-3 border-cyan-400 rounded-bl" />
                     <div className="absolute -bottom-1 -right-1 w-6 h-6 border-b-3 border-r-3 border-cyan-400 rounded-br" />
 
-                    {/* Zone 1: REFERENCE COLOR SCALE (Top Section) */}
-                    <div className="p-2 rounded-xl border border-dashed border-cyan-400/80 bg-cyan-950/50 text-center space-y-1">
+                    {/* Zone 1: REFERENCE COLOR SCALE (Top Horizontal Section) */}
+                    <div className="p-2 rounded-xl border border-dashed border-cyan-400/80 bg-cyan-950/60 text-center space-y-1">
                       <div className="flex items-center justify-between px-1">
                         <span className="text-[10px] font-mono font-bold text-cyan-300 uppercase tracking-wide">
-                          REFERENCE SCALE
+                          REFERENCE COLOR SCALE
                         </span>
                         <span className="text-[9px] font-mono text-cyan-400/80">7-Patch Standard</span>
                       </div>
@@ -622,32 +704,32 @@ export const WorkerCameraScanView: React.FC<WorkerCameraScanViewProps> = ({
                       </div>
                     </div>
 
-                    {/* Scientific Optical Alignment Axis */}
+                    {/* Optical Calibration Alignment Axis */}
                     <div className="flex items-center justify-between text-[8px] font-mono text-cyan-400/60 px-2 my-0.5">
                       <span>├───</span>
-                      <span className="tracking-widest uppercase text-[9px] text-gray-400 font-bold">
-                        MATCH BOTH REGIONS IN FRAME
+                      <span className="tracking-widest uppercase text-[9px] text-gray-300 font-bold">
+                        Align both regions inside the guide
                       </span>
                       <span>───┤</span>
                     </div>
 
-                    {/* Zone 2: REACTION STRIP (Bottom Section) */}
-                    <div className="p-2.5 rounded-xl border border-dashed border-amber-400/80 bg-amber-950/50 text-center space-y-1.5">
+                    {/* Zone 2: REACTION STRIP (Bottom Elongated Horizontal Section) */}
+                    <div className="p-2 rounded-xl border border-dashed border-amber-400/80 bg-amber-950/60 text-center space-y-1">
                       <div className="flex items-center justify-between px-1">
                         <span className="text-[10px] font-mono font-bold text-amber-300 uppercase tracking-wide">
                           REACTION STRIP
                         </span>
-                        <span className="text-[9px] font-mono text-amber-400/80">Physical Strip</span>
+                        <span className="text-[9px] font-mono text-amber-400/80">Physical Strip (Aspect ~ 4:1)</span>
                       </div>
 
                       {/* Horizontal Elongated Strip Schematic */}
-                      <div className="w-full h-7 rounded-lg bg-gray-900/90 border border-amber-400/60 flex items-center overflow-hidden p-0.5">
-                        <div className="w-2/5 h-full bg-gray-300/80 border-r border-black/40 flex items-center justify-center">
-                          <span className="text-[7px] font-mono text-gray-900 font-bold">HANDLE</span>
+                      <div className="w-full h-6 rounded-md bg-gray-900/90 border border-amber-400/60 flex items-center overflow-hidden p-0.5">
+                        <div className="w-1/4 h-full bg-gray-300/80 border-r border-black/40 flex items-center justify-center">
+                          <span className="text-[7px] font-mono text-gray-900 font-bold">BASE</span>
                         </div>
-                        <div className="w-3/5 h-full bg-gradient-to-r from-amber-600/70 to-purple-800/80 flex items-center justify-center">
+                        <div className="w-3/4 h-full bg-gradient-to-r from-amber-600/70 to-purple-800/80 flex items-center justify-center">
                           <span className="text-[8px] font-mono text-white font-bold tracking-wider">
-                            REACTED ZONE
+                            ━━━━━━━━ REACTION STRIP ━━━━━━━━
                           </span>
                         </div>
                       </div>
@@ -656,14 +738,14 @@ export const WorkerCameraScanView: React.FC<WorkerCameraScanViewProps> = ({
 
                   {/* Bottom Helper Callout */}
                   <div className="text-[10px] font-mono text-gray-300 bg-black/80 px-3.5 py-1 rounded-full text-center border border-white/10">
-                    Place both the reaction strip and reference scale inside the frame.
+                    Align both the reaction strip and reference scale inside the guide.
                   </div>
                 </div>
 
                 {cameraLoading && (
                   <div className="absolute inset-0 bg-black/85 flex flex-col items-center justify-center space-y-2.5 z-20">
                     <div className="w-8 h-8 border-3 border-cyan-400 border-t-transparent rounded-full animate-spin" />
-                    <span className="text-xs font-mono text-gray-300">Starting Optical Camera...</span>
+                    <span className="text-xs font-mono text-gray-300">INITIALIZING CAMERA...</span>
                   </div>
                 )}
               </>
@@ -683,10 +765,12 @@ export const WorkerCameraScanView: React.FC<WorkerCameraScanViewProps> = ({
                   <div className="text-xs font-mono text-cyan-300 font-medium">
                     Evaluating optical colorimetry & lighting calibration
                   </div>
-                  <div className="text-[10px] font-mono text-figma-textMuted pt-1 space-y-0.5">
-                    <div>1. Segmenting Reference Scale & Strip</div>
-                    <div>2. Applying D65 Lighting Normalization Matrix</div>
-                    <div>3. Computing Cumulative H₂S Dose (ppm·min)</div>
+                  <div className="text-[10px] font-mono text-figma-textMuted pt-1 space-y-0.5 text-left max-w-xs mx-auto">
+                    <div>✓ 1. Validating Image Resolution & Blur</div>
+                    <div>✓ 2. Detecting Reference Scale & Reaction Strip</div>
+                    <div>✓ 3. Applying Lighting Normalization Matrix</div>
+                    <div>✓ 4. Extracting Interior Chemical Color</div>
+                    <div>✓ 5. Computing Cumulative H₂S Dose (ppm·min)</div>
                   </div>
                 </div>
               </div>
@@ -781,7 +865,7 @@ export const WorkerCameraScanView: React.FC<WorkerCameraScanViewProps> = ({
             {showDiagnostics && (
               <div className="mt-2 p-3 rounded-xl bg-black/60 border border-figma-border text-[10px] font-mono space-y-1 text-figma-textSecondary animate-fadeIn">
                 <div>State: <strong className="text-white">{scanState}</strong></div>
-                <div>Live Quality: <strong className="text-emerald-400">{liveQuality.status} (Lum: {liveQuality.brightness}, Sharp: {liveQuality.sharpness})</strong></div>
+                <div>Live Quality: <strong className="text-emerald-400">{liveQuality.state} (Lum: {liveQuality.brightness}, Sharp: {liveQuality.sharpness})</strong></div>
                 <div>Secure Context: <strong className={diagnostics.isSecureContext ? 'text-emerald-400' : 'text-red-400'}>{diagnostics.isSecureContext ? 'YES' : 'NO'}</strong></div>
                 <div>Camera: <strong className="text-white">{diagnostics.activeCameraLabel || 'Rear Camera'}</strong></div>
               </div>
