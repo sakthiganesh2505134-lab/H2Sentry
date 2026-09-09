@@ -10,9 +10,11 @@ from fastapi.staticfiles import StaticFiles
 
 from backend.app.api.endpoints import health, cv, readings, workers, calibration, settings, badges, demo, auth
 from backend.app.database.database import engine, Base
+from backend.app.database.seed import seed_if_empty
 
 # Ensure database tables exist safely on startup
 Base.metadata.create_all(bind=engine)
+seed_if_empty()
 
 app = FastAPI(
     title="H2Sentry — Passive Colorimetric H2S Exposure-Dosimeter API",

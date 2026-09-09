@@ -12,12 +12,14 @@ from datetime import datetime, timedelta, timezone
 from backend.app.database.database import engine, Base, SessionLocal
 from backend.app.database.models import Worker, Badge, Reading, CalibrationSample
 
-def seed_database():
-    Base.metadata.drop_all(bind=engine)
+def seed_database(reset: bool = True):
+    if reset:
+        Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
 
     now = datetime.now(timezone.utc).replace(tzinfo=None)
+
 
     # 1. Seed Industrial Workers (Demo Scenario)
     workers_data = [
@@ -1014,6 +1016,16 @@ def seed_database():
     db.commit()
     db.close()
     print("H2Sentry Database successfully seeded with deterministic demo benchmarks.")
+
+def seed_if_empty():
+    db = SessionLocal()
+    try:
+        if db.query(Worker).count() == 0:
+            seed_database(reset=False)
+    except Exception as e:
+        print(f"Warning during seed_if_empty: {e}")
+    finally:
+        db.close()
 
 if __name__ == "__main__":
     seed_database()
