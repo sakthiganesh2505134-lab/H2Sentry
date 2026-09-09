@@ -1,0 +1,30 @@
+{
+  "short_name": "H2Sentry",
+  "name": "H2Sentry — Passive H₂S Exposure Dosimetry",
+  "icons": [
+    {
+      "src": "/pwa-192x192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/pwa-512x512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#0c0f17",
+  "theme_color": "#0c0f17",
+  "display": "standalone",
+  "orientation": "portrait",
+  "description": "Passive cumulative H2S exposure dosimeter system combining colorimetric wristbands with smartphone computer vision."
+}
+
