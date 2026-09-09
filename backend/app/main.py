@@ -69,13 +69,38 @@ app.include_router(calibration.router, prefix="/api/calibration", tags=["Calibra
 app.include_router(settings.router, prefix="/api/settings", tags=["Safety Thresholds & Settings"])
 app.include_router(demo.router, prefix="/api/demo", tags=["Demo Simulation & State Management"])
 
-@app.get("/")
-def root():
-    return {
-        "project": "H2Sentry",
-        "sih_code": "SIH26118",
-        "organization": "Mangalore Refinery and Petrochemicals Limited (MRPL)",
-        "docs_url": "/docs",
-        "health_url": "/health"
-    }
+# Mount built React/Vite Frontend if present (All-in-One Single Free Web Service on Render)
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+FRONTEND_DIST = os.path.join(PROJECT_ROOT, "frontend", "dist")
+
+if os.path.exists(FRONTEND_DIST):
+    assets_dir = os.path.join(FRONTEND_DIST, "assets")
+    if os.path.exists(assets_dir):
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="frontend_assets")
+    
+    from fastapi.responses import FileResponse
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def serve_spa_frontend(full_path: str):
+        # Allow API, static uploads, and docs routes to pass through
+        if full_path.startswith(("api/", "static/", "docs", "openapi.json", "health")):
+            return None
+        file_path = os.path.join(FRONTEND_DIST, full_path)
+        if os.path.isfile(file_path):
+            return FileResponse(file_path)
+        index_file = os.path.join(FRONTEND_DIST, "index.html")
+        if os.path.exists(index_file):
+            return FileResponse(index_file)
+        return {"project": "H2Sentry", "status": "active"}
+else:
+    @app.get("/")
+    def root():
+        return {
+            "project": "H2Sentry",
+            "sih_code": "SIH26118",
+            "organization": "Mangalore Refinery and Petrochemicals Limited (MRPL)",
+            "docs_url": "/docs",
+            "health_url": "/health"
+        }
+
 
