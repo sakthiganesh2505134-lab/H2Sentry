@@ -1,0 +1,201 @@
+{
+  "report_title": "H2Sentry Master Synthetic Dataset & Model Quality Audit",
+  "disclaimer": "ALL DATA AND METRICS ARE SYNTHETIC SOFTWARE-VALIDATION RESULTS. NOT LABORATORY H2S CALIBRATION.",
+  "generation_timestamp": "2026-09-08T17:59:54.807791+00:00",
+  "dataset_statistics": {
+    "total_images": 5181,
+    "train_count": 3441,
+    "validation_count": 875,
+    "test_count": 865,
+    "independent_chemical_states_total": 600,
+    "independent_chemical_states_train": 400,
+    "independent_chemical_states_val": 100,
+    "independent_chemical_states_test": 100,
+    "dose_min_ppm_min": 0.0,
+    "dose_max_ppm_min": 1994.7,
+    "dose_mean_ppm_min": 711.13,
+    "dose_median_ppm_min": 625.78
+  },
+  "data_integrity_checks": {
+    "nan_count_total": 0,
+    "infinite_count_total": 0,
+    "exact_feature_duplicates": 0,
+    "chemical_state_leakage_train_val": 0,
+    "chemical_state_leakage_train_test": 0,
+    "chemical_state_leakage_val_test": 0,
+    "leakage_isolation_verified": true,
+    "qr_code_excluded_from_features": true,
+    "filename_excluded_from_features": true,
+    "badge_id_excluded_from_features": true,
+    "ground_truth_dose_excluded_from_features": true
+  },
+  "physical_strip_specifications": {
+    "target_dimensions": "8 mm x 4 mm",
+    "aspect_ratio": "2:1",
+    "geometry": "Horizontal rounded-corner rectangle",
+    "reaction_area_purity": "Pure colorimetric response, zero exterior text/QR/dose inside strip area",
+    "printable_sheet_path": "data/calibration/physical_strips/printable_strip_sheet.png",
+    "prototype_compatibility": "Fully compatible with 8x4mm wristband sensing aperture"
+  },
+  "anchor_colors_calibration_spectrum": {
+    "0_ppm_min": {
+      "dose_ppm_min": 0.0,
+      "rgb": [
+        245,
+        240,
+        222
+      ],
+      "cielab": [
+        94.74,
+        -1.35,
+        9.29
+      ],
+      "response_state": "UNEXPOSED_BASELINE",
+      "above_calibration_range": false
+    },
+    "48_ppm_min": {
+      "dose_ppm_min": 48.0,
+      "rgb": [
+        233,
+        226,
+        207
+      ],
+      "cielab": [
+        89.96,
+        -0.81,
+        10.13
+      ],
+      "response_state": "DYNAMIC_RESPONSE",
+      "above_calibration_range": false
+    },
+    "150_ppm_min": {
+      "dose_ppm_min": 150.0,
+      "rgb": [
+        211,
+        200,
+        178
+      ],
+      "cielab": [
+        80.95,
+        0.18,
+        12.38
+      ],
+      "response_state": "DYNAMIC_RESPONSE",
+      "above_calibration_range": false
+    },
+    "240_ppm_min": {
+      "dose_ppm_min": 240.0,
+      "rgb": [
+        193,
+        180,
+        157
+      ],
+      "cielab": [
+        73.81,
+        0.83,
+        13.41
+      ],
+      "response_state": "DYNAMIC_RESPONSE",
+      "above_calibration_range": false
+    },
+    "480_ppm_min": {
+      "dose_ppm_min": 480.0,
+      "rgb": [
+        154,
+        137,
+        113
+      ],
+      "cielab": [
+        57.99,
+        2.5,
+        15.23
+      ],
+      "response_state": "DYNAMIC_RESPONSE",
+      "above_calibration_range": false
+    },
+    "742_ppm_min": {
+      "dose_ppm_min": 742.0,
+      "rgb": [
+        122,
+        103,
+        80
+      ],
+      "cielab": [
+        44.83,
+        3.9,
+        15.81
+      ],
+      "response_state": "DYNAMIC_RESPONSE",
+      "above_calibration_range": false
+    },
+    "960_ppm_min": {
+      "dose_ppm_min": 960.0,
+      "rgb": [
+        102,
+        83,
+        62
+      ],
+      "cielab": [
+        36.67,
+        4.56,
+        15.27
+      ],
+      "response_state": "DYNAMIC_RESPONSE",
+      "above_calibration_range": false
+    },
+    "1850_ppm_min": {
+      "dose_ppm_min": 1850.0,
+      "rgb": [
+        58,
+        42,
+        28
+      ],
+      "cielab": [
+        18.54,
+        5.23,
+        12.02
+      ],
+      "response_state": "SATURATED",
+      "above_calibration_range": false
+    },
+    "1920_ppm_min": {
+      "dose_ppm_min": 1920.0,
+      "rgb": [
+        56,
+        41,
+        27
+      ],
+      "cielab": [
+        17.95,
+        4.76,
+        11.87
+      ],
+      "response_state": "SATURATED",
+      "above_calibration_range": false
+    }
+  },
+  "saturation_characteristics": {
+    "diffusion_rate_constant_k": 850.0,
+    "unexposed_baseline_rgb": [
+      245,
+      240,
+      222
+    ],
+    "saturated_limit_rgb": [
+      35,
+      25,
+      18
+    ],
+    "saturation_dose_threshold_ppm_min": 2000.0,
+    "saturation_flag_handling": "Above calibration range flag triggered for doses approaching saturation"
+  },
+  "model_performance_summary": {
+    "selected_model": "GradientBoostingRegressor",
+    "test_mae_ppm_min": 21.87,
+    "test_rmse_ppm_min": 37.23,
+    "test_r2_score": 0.9954,
+    "validation_mae_ppm_min": 20.72,
+    "validation_rmse_ppm_min": 39.34,
+    "validation_r2_score": 0.9948
+  }
+}

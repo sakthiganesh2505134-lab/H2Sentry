@@ -2,22 +2,26 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Download, 
   Watch, 
-  User,
-  Plus,
-  KeyRound,
-  X
+  User, 
+  Plus, 
+  KeyRound, 
+  X, 
+  Calendar, 
+  History,
+  Activity,
+  Info
 } from 'lucide-react';
 import { 
   ResponsiveContainer, 
-  LineChart, 
-  Line, 
+  BarChart,
+  Bar,
+  Cell,
   XAxis, 
   YAxis, 
   CartesianGrid, 
   Tooltip, 
   ReferenceLine 
 } from 'recharts';
-import { CircularTwaGauge } from './common/CircularTwaGauge';
 import type { Worker, WorkerDetail, Reading, WorkerCreatePayload, BadgeCreatePayload } from '../types';
 import { fetchWorkers, fetchWorkerDetail, createWorker, createOrAssignBadge } from '../services/api';
 
@@ -36,6 +40,7 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [activeWorkerId, setActiveWorkerId] = useState<string | null>(initialSelectedWorkerId || null);
   const [workerDetail, setWorkerDetail] = useState<WorkerDetail | null>(null);
+  const [selectedPeriod, setSelectedPeriod] = useState<7 | 15 | 30>(30); // Default 30 Days (Section 6)
   
   // Modals
   const [showAddWorkerModal, setShowAddWorkerModal] = useState<boolean>(false);
@@ -68,14 +73,14 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
     }
   }, [activeWorkerId]);
 
-  const loadWorkerDetail = useCallback(async (id: string) => {
+  const loadWorkerDetail = useCallback(async (id: string, days: number = selectedPeriod) => {
     try {
-      const data = await fetchWorkerDetail(id);
+      const data = await fetchWorkerDetail(id, days);
       setWorkerDetail(data);
     } catch (err) {
       console.error('Failed to load worker detail', err);
     }
-  }, []);
+  }, [selectedPeriod]);
 
   useEffect(() => {
     loadWorkers();
@@ -89,9 +94,9 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
 
   useEffect(() => {
     if (activeWorkerId) {
-      loadWorkerDetail(activeWorkerId);
+      loadWorkerDetail(activeWorkerId, selectedPeriod);
     }
-  }, [activeWorkerId, loadWorkerDetail]);
+  }, [activeWorkerId, selectedPeriod, loadWorkerDetail]);
 
   const handleCreateWorker = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -149,7 +154,7 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
       await createOrAssignBadge(payload);
       setModalSuccess(`Badge ${badgeIdInput} assigned to ${currentWorker?.name}.`);
       await loadWorkers();
-      if (activeWorkerId) loadWorkerDetail(activeWorkerId);
+      if (activeWorkerId) loadWorkerDetail(activeWorkerId, selectedPeriod);
       setTimeout(() => {
         setShowAssignBadgeModal(false);
         setModalSuccess(null);
@@ -161,41 +166,43 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
   };
 
   const currentWorker = workerDetail?.worker || workers.find((w) => w.id === activeWorkerId) || null;
-  const currentTwa = currentWorker?.latest_reading?.equivalent_8h_twa_ppm ?? 0.0;
-  const currentStatus = currentWorker?.latest_reading?.status || 'LOW';
   const readings = workerDetail?.readings_history || [];
 
-  // Chart data from actual readings or clean baseline
-  const chartData = readings.length > 0 
-    ? readings.map((r) => ({
-        time: new Date(r.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        twa: r.equivalent_8h_twa_ppm,
-        dose: r.estimated_dose
-      })).reverse()
-    : [
-        { time: 'Shift Start', twa: 0.0, dose: 0.0 }
-      ];
+  // Filter readings for the selected period
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - selectedPeriod);
+  
+  const periodReadings = readings.filter(r => r.timestamp && new Date(r.timestamp) >= cutoffDate);
+  const periodCumulativeDose = workerDetail?.period_cumulative_dose !== undefined 
+    ? workerDetail.period_cumulative_dose 
+    : periodReadings.reduce((sum, r) => sum + r.estimated_dose, 0);
 
-  const getStatusDot = (status?: string) => {
+  const latestReading = readings.length > 0 ? readings[0] : currentWorker?.latest_reading;
+  const firstReadingInPeriod = periodReadings.length > 0 ? periodReadings[periodReadings.length - 1] : null;
+
+  const firstReadingDateStr = firstReadingInPeriod?.timestamp 
+    ? new Date(firstReadingInPeriod.timestamp).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+    : 'No scans in period';
+  const latestReadingDateStr = latestReading?.timestamp
+    ? new Date(latestReading.timestamp).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+    : 'No scans recorded';
+
+  // Daily exposure dataset from backend DB aggregation (Section 7 & 8)
+  const dailyExposureData = workerDetail?.daily_exposure && workerDetail.daily_exposure.length > 0
+    ? workerDetail.daily_exposure
+    : [];
+
+  const hasDailyReadings = dailyExposureData.length > 0 && dailyExposureData.some(d => d.exposure_ppm_min > 0);
+
+  const getStatusBadge = (status?: string) => {
     const s = String(status || 'LOW').toUpperCase();
     if (s === 'DANGER' || s === 'HIGH' || s === 'CRITICAL') {
-      return <span className="w-2 h-2 rounded-full bg-figma-danger shrink-0" />;
+      return <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-red-50 text-red-700 border border-red-200">Action Required</span>;
     }
     if (s === 'ELEVATED' || s === 'MODERATE' || s === 'WARNING') {
-      return <span className="w-2 h-2 rounded-full bg-figma-warning shrink-0" />;
+      return <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-amber-50 text-amber-700 border border-amber-200">Review Recommended</span>;
     }
-    return <span className="w-2 h-2 rounded-full bg-figma-safe shrink-0" />;
-  };
-
-  const getStatusText = (status?: string) => {
-    const s = String(status || 'LOW').toUpperCase();
-    if (s === 'DANGER' || s === 'HIGH' || s === 'CRITICAL') {
-      return <span className="text-figma-danger font-bold font-mono">HIGH EXPOSURE</span>;
-    }
-    if (s === 'ELEVATED' || s === 'MODERATE' || s === 'WARNING') {
-      return <span className="text-figma-warning font-bold font-mono">MODERATE</span>;
-    }
-    return <span className="text-figma-safe font-bold font-mono">SAFE</span>;
+    return <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">Within Range</span>;
   };
 
   const handleExportCsv = () => {
@@ -240,63 +247,63 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
   return (
     <div className="space-y-6 animate-fadeIn pb-12">
       {/* Top Breadcrumb & Action Buttons */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-figma-border/60">
-        <div className="flex items-center space-x-2 text-xs font-mono text-figma-textMuted">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-slate-200">
+        <div className="flex items-center space-x-2 text-xs font-mono text-slate-500">
           <button 
             onClick={onNavigateBackToDashboard}
-            className="hover:text-white transition-colors"
+            className="hover:text-slate-900 transition-colors font-semibold"
           >
             Dashboard
           </button>
           <span>/</span>
-          <span className="text-figma-textSecondary">Personnel Directory</span>
+          <span className="text-slate-500">Personnel Directory</span>
           <span>/</span>
-          <span className="text-white font-bold">{currentWorker?.name || 'Worker Detail'}</span>
+          <span className="text-slate-900 font-bold">{currentWorker?.name || 'Worker Detail'}</span>
         </div>
 
         {/* Action Buttons Right */}
         <div className="flex items-center space-x-3">
           <button
             onClick={() => setShowAddWorkerModal(true)}
-            className="figma-button-secondary py-2 px-3.5 text-xs font-semibold space-x-1.5"
+            className="py-2 px-3.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold flex items-center space-x-1.5 shadow-xs transition"
           >
-            <Plus className="w-3.5 h-3.5 text-figma-accent" />
+            <Plus className="w-3.5 h-3.5 text-sky-600" />
             <span>Add Worker</span>
           </button>
 
           <button
             onClick={() => setShowAssignBadgeModal(true)}
             disabled={!currentWorker}
-            className="figma-button-primary py-2 px-3.5 text-xs font-bold space-x-1.5"
+            className="py-2 px-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center space-x-1.5 shadow-xs transition disabled:opacity-50"
           >
-            <KeyRound className="w-3.5 h-3.5" />
+            <KeyRound className="w-3.5 h-3.5 text-sky-400" />
             <span>Assign Badge</span>
           </button>
 
           <button
             onClick={handleExportCsv}
             disabled={readings.length === 0}
-            className="figma-button-secondary py-2 px-3.5 text-xs font-semibold space-x-2 disabled:opacity-40"
+            className="py-2 px-3.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold flex items-center space-x-2 shadow-xs transition disabled:opacity-40"
           >
-            <Download className="w-3.5 h-3.5 text-figma-textMuted" />
+            <Download className="w-3.5 h-3.5 text-slate-400" />
             <span>Export CSV</span>
           </button>
         </div>
       </div>
 
       {/* Operator Metadata Header Card */}
-      <div className="figma-card p-5">
+      <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-center">
           {/* Worker Avatar & Name */}
           <div className="flex items-center space-x-3.5 md:col-span-1">
-            <div className="w-12 h-12 rounded-full bg-figma-card border border-figma-border flex items-center justify-center text-figma-textMuted shrink-0">
-              <User className="w-6 h-6 text-figma-textSecondary" />
+            <div className="w-12 h-12 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-500 shrink-0">
+              <User className="w-6 h-6 text-sky-600" />
             </div>
             <div>
-              <h2 className="text-base sm:text-lg font-bold text-white font-sans">
+              <h2 className="text-base sm:text-lg font-bold text-slate-900 font-sans">
                 {currentWorker?.name || 'No worker selected'}
               </h2>
-              <div className="text-xs font-mono text-figma-textMuted">
+              <div className="text-xs font-mono text-slate-500 font-semibold">
                 EMP ID: {currentWorker?.employee_id || 'N/A'}
               </div>
             </div>
@@ -304,34 +311,38 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
 
           {/* Zone & Unit */}
           <div className="space-y-0.5">
-            <span className="text-[11px] font-mono text-figma-textMuted uppercase tracking-wider block">
+            <span className="text-[11px] font-mono text-slate-500 uppercase tracking-wider block font-semibold">
               DEPARTMENT & UNIT
             </span>
-            <span className="text-sm font-bold text-white font-sans">
+            <span className="text-sm font-bold text-slate-900 font-sans">
               {currentWorker?.department || 'Operations'} {currentWorker?.unit ? `(${currentWorker.unit})` : ''}
             </span>
           </div>
 
           {/* Active Shift */}
           <div className="space-y-0.5">
-            <span className="text-[11px] font-mono text-figma-textMuted uppercase tracking-wider block">
+            <span className="text-[11px] font-mono text-slate-500 uppercase tracking-wider block font-semibold">
               ACTIVE SHIFT
             </span>
-            <span className="text-sm font-bold text-white font-sans">
-              {currentWorker?.shift || 'Shift A'}
+            <span className="text-sm font-bold text-slate-900 font-sans">
+              {currentWorker?.shift || 'Shift A (06:00 - 14:00)'}
             </span>
           </div>
 
-          {/* Sensor Badge */}
+          {/* Assigned Sensor Badge */}
           <div className="space-y-0.5">
-            <span className="text-[11px] font-mono text-figma-textMuted uppercase tracking-wider block">
-              ASSIGNED BADGE
+            <span className="text-[11px] font-mono text-slate-500 uppercase tracking-wider block font-semibold">
+              CURRENT BADGE
             </span>
-            <span className="text-sm font-bold text-figma-accent font-sans flex items-center space-x-1.5">
-              <Watch className="w-3.5 h-3.5" />
-              <span>{currentWorker?.active_badge_id || 'Unassigned'}</span>
-              <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded ml-1 ${currentWorker?.badge_status === 'VALID' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-red-500/15 text-red-400'}`}>
-                {currentWorker?.badge_status || 'VALID'}
+            <span className="text-sm font-bold text-slate-900 font-sans flex items-center space-x-1.5">
+              <Watch className="w-3.5 h-3.5 text-sky-600" />
+              <span className="font-mono text-sky-700">{currentWorker?.active_badge_id || 'Unassigned'}</span>
+              <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded ml-1 ${
+                currentWorker?.badge_status === 'VALID' || !currentWorker?.badge_status
+                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+                  : 'bg-red-50 text-red-700 border border-red-200'
+              }`}>
+                {currentWorker?.badge_status || 'ACTIVE'}
               </span>
             </span>
           </div>
@@ -341,10 +352,10 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
       {/* Main Grid: Left Selector List (4 cols) | Right Detail Dashboard (8 cols) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column: Worker Directory List */}
-        <div className="lg:col-span-4 figma-card p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-mono font-bold uppercase text-white">
-              Operators ({filteredWorkers.length})
+        <div className="lg:col-span-4 bg-white rounded-2xl p-4 border border-slate-200 shadow-xs space-y-3">
+          <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+            <span className="text-xs font-mono font-bold uppercase text-slate-700">
+              Personnel Register ({filteredWorkers.length})
             </span>
             <div className="relative w-36">
               <input
@@ -352,38 +363,44 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
                 placeholder="Search..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full px-2 py-1 rounded bg-black/40 border border-figma-border text-white text-[11px] font-mono focus:outline-none focus:border-figma-accent"
+                className="w-full px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 text-xs font-sans placeholder:text-slate-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
               />
             </div>
           </div>
 
-          <div className="space-y-1.5 max-h-[440px] overflow-y-auto pr-1">
+          <div className="space-y-1.5 max-h-[520px] overflow-y-auto pr-1">
             {filteredWorkers.length > 0 ? (
-              filteredWorkers.map((w) => (
-                <div
-                  key={w.id}
-                  onClick={() => setActiveWorkerId(w.id)}
-                  className={`p-3 rounded-xl border cursor-pointer transition ${
-                    activeWorkerId === w.id
-                      ? 'bg-figma-accent/10 border-figma-accent shadow-md'
-                      : 'bg-figma-card/50 border-figma-border/70 hover:bg-figma-card hover:border-figma-border'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-white font-sans">{w.name}</span>
-                    <span className="text-[10px] font-mono text-figma-accent">{w.employee_id}</span>
+              filteredWorkers.map((w) => {
+                const w30d = w.cumulative_30d_dose !== undefined && w.cumulative_30d_dose !== null 
+                  ? w.cumulative_30d_dose 
+                  : (w.latest_reading?.estimated_dose || 0);
+
+                return (
+                  <div
+                    key={w.id}
+                    onClick={() => setActiveWorkerId(w.id)}
+                    className={`p-3 rounded-xl border cursor-pointer transition ${
+                      activeWorkerId === w.id
+                        ? 'bg-sky-50 border-sky-300 shadow-xs'
+                        : 'bg-white border-slate-200 hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-900 font-sans">{w.name}</span>
+                      <span className="text-[10px] font-mono font-semibold text-sky-700">{w.employee_id}</span>
+                    </div>
+                    <div className="flex items-center justify-between mt-1 text-[11px] text-slate-500">
+                      <span className="truncate max-w-[130px]">{w.department}</span>
+                      <span className="font-mono font-semibold text-slate-800">
+                        {w30d > 0 ? `${Number(w30d).toLocaleString('en-US')} ppm·min` : '0 ppm·min'}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between mt-1 text-[11px] text-figma-textSecondary">
-                    <span className="truncate max-w-[140px]">{w.department}</span>
-                    <span className="font-mono text-white">
-                      {w.latest_reading ? `${w.latest_reading.estimated_dose} ppm·min` : '0 readings'}
-                    </span>
-                  </div>
-                </div>
-              ))
+                );
+              })
             ) : (
-              <div className="py-8 text-center text-xs text-figma-textMuted font-mono">
-                No workers found. Click "+ Add Worker" above.
+              <div className="py-8 text-center text-xs text-slate-400 font-mono">
+                No workers found.
               </div>
             )}
           </div>
@@ -391,140 +408,235 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
 
         {/* Right Column: Active Worker Exposure Dossier */}
         <div className="lg:col-span-8 space-y-6">
-          {/* Middle Row: Left 8-HR TWA Status Radial Ring | Right Shift Exposure Timeline (TWA) Chart */}
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-            {/* TWA Status Gauge (5 cols) */}
-            <div className="md:col-span-5 figma-card p-6 flex flex-col items-center justify-center space-y-3">
-              <span className="text-xs font-mono font-bold uppercase tracking-wider text-figma-textMuted">
-                LATEST EXPOSURE GAUGE
-              </span>
-
-              <div className="my-auto py-2">
-                <CircularTwaGauge
-                  value={currentTwa}
-                  status={currentStatus}
-                  unit="ppm"
-                  size={190}
-                  strokeWidth={13}
-                  sublabel="8-HR TWA"
-                  showIcon={true}
-                />
+          {/* Prominent Cumulative Summary Card with 7D / 15D / 30D Period Selector (Section 6) */}
+          <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl p-6 text-white border border-slate-700 shadow-md space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-700/80">
+              <div>
+                <div className="text-[10px] font-mono text-sky-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
+                  <Activity className="w-3.5 h-3.5 text-sky-400" />
+                  <span>CUMULATIVE H₂S EXPOSURE INTELLIGENCE</span>
+                </div>
+                <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight font-sans mt-0.5">
+                  {currentWorker?.name || 'Ravi Kumar'}
+                </h2>
+                <div className="text-xs font-mono text-slate-300">
+                  EMP ID: <strong className="text-white">{currentWorker?.employee_id || 'EMP1024'}</strong> • {currentWorker?.department}
+                </div>
               </div>
 
-              <div className="text-center text-xs font-mono text-figma-textSecondary">
-                Cumulative Dose: <strong className="text-white">{currentWorker?.latest_reading?.estimated_dose || 0} ppm·min</strong>
+              {/* Period Selector: 7 DAYS | 15 DAYS | 30 DAYS (Default 30 DAYS) */}
+              <div className="flex items-center space-x-1 p-1 bg-slate-800/90 rounded-xl border border-slate-700">
+                {([7, 15, 30] as const).map((period) => (
+                  <button
+                    key={period}
+                    onClick={() => setSelectedPeriod(period)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition ${
+                      selectedPeriod === period
+                        ? 'bg-sky-600 text-white shadow-sm'
+                        : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+                    }`}
+                  >
+                    {period} DAYS
+                  </button>
+                ))}
               </div>
             </div>
 
-            {/* Shift Exposure Timeline Chart (7 cols) */}
-            <div className="md:col-span-7 figma-card p-5 space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-white font-sans">
-                  Shift Exposure Timeline
-                </h3>
-                <span className="text-[10px] font-mono text-figma-accent px-2 py-0.5 rounded bg-figma-accent/10 border border-figma-accent/20">
-                  CAL-v0.1-demo
-                </span>
+            {/* Cumulative Exposure Value & Period Metadata */}
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+              <div className="md:col-span-7 space-y-1">
+                <div className="text-[10px] font-mono text-sky-400 uppercase tracking-widest font-bold">
+                  {selectedPeriod}-DAY CUMULATIVE H₂S EXPOSURE
+                </div>
+                <div className="flex items-baseline space-x-2">
+                  <span className="text-3xl sm:text-4xl font-black font-mono tracking-tight text-white">
+                    {Number(periodCumulativeDose).toLocaleString('en-US')}
+                  </span>
+                  <span className="text-base font-mono text-slate-300 font-normal">
+                    ppm·min
+                  </span>
+                </div>
+                <div className="text-xs text-slate-300 font-sans">
+                  Recorded cumulative exposure over the selected {selectedPeriod}-day window.
+                </div>
+                <div className="text-[11px] text-slate-400 font-sans">
+                  Sum of recorded passive exposure estimates during the selected period.
+                </div>
               </div>
 
-              {/* Recharts Timeline Graph */}
-              <div className="h-44 w-full pt-1">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData} margin={{ top: 10, right: 20, left: -20, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#243047" vertical={false} />
-                    <XAxis 
-                      dataKey="time" 
-                      stroke="#64748B" 
-                      tick={{ fontSize: 10, fill: '#94A3B8' }} 
-                      axisLine={{ stroke: '#243047' }}
-                    />
-                    <YAxis 
-                      stroke="#64748B" 
-                      tick={{ fontSize: 10, fill: '#94A3B8' }} 
-                      axisLine={{ stroke: '#243047' }}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: '#111622',
-                        borderColor: '#243047',
-                        borderRadius: '8px',
-                        fontSize: '11px',
-                        fontFamily: 'monospace',
-                      }}
-                      itemStyle={{ color: '#00f0ff' }}
-                    />
-                    <ReferenceLine y={5} stroke="#EF4444" strokeDasharray="4 4" />
-                    <Line
-                      type="monotone"
-                      dataKey="twa"
-                      stroke="#00f0ff"
-                      strokeWidth={2.5}
-                      dot={{ r: 4, fill: '#00f0ff', stroke: '#111622', strokeWidth: 2 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+              <div className="md:col-span-5 grid grid-cols-2 gap-2.5 p-3 rounded-xl bg-slate-800/60 border border-slate-700/60 font-mono text-xs">
+                <div>
+                  <span className="text-slate-400 text-[10px] block">Last Reading:</span>
+                  <span className="font-bold text-white">
+                    {latestReading ? `${latestReading.estimated_dose.toFixed(0)} ppm·min` : '0 ppm·min'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-400 text-[10px] block">Period Readings:</span>
+                  <span className="font-bold text-white">
+                    {periodReadings.length} recorded
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-400 text-[10px] block">First in Period:</span>
+                  <span className="text-slate-300 text-[10px] truncate block" title={firstReadingDateStr}>
+                    {firstReadingDateStr}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-400 text-[10px] block">Latest in Period:</span>
+                  <span className="text-slate-300 text-[10px] truncate block" title={latestReadingDateStr}>
+                    {latestReadingDateStr}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Bottom Card: Shift Exposure Log */}
-          <div className="figma-card p-5 space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-white font-sans">
-                Occupational Exposure Log
-              </h3>
-              <span className="text-xs font-mono text-figma-textMuted">
-                {readings.length} reading{readings.length === 1 ? '' : 's'} recorded
+          {/* Supervisor Exposure Graph (Section 7 & 8) */}
+          <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-slate-100 gap-2">
+              <div className="space-y-0.5">
+                <div className="flex items-center space-x-2">
+                  <Calendar className="w-4 h-4 text-sky-600" />
+                  <h3 className="text-sm font-bold text-slate-900 font-sans">
+                    Recorded Exposure by Day ({selectedPeriod}-Day View)
+                  </h3>
+                </div>
+                <p className="text-[11px] text-slate-500">
+                  Daily passive cumulative exposure integrals (<span className="font-mono">ppm·min</span>) from database records.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-mono font-bold text-slate-700 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200">
+                  {selectedPeriod}-DAY TOTAL:{' '}
+                  <span className="text-sky-800">{Number(periodCumulativeDose).toLocaleString('en-US')} ppm·min</span>
+                </span>
+              </div>
+            </div>
+
+            {/* Render Real DB Graph or Clean Empty State */}
+            {hasDailyReadings ? (
+              <div className="h-56 w-full pt-1">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={dailyExposureData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
+                    <XAxis 
+                      dataKey="day_label" 
+                      stroke="#64748B" 
+                      tick={{ fontSize: 10, fill: '#64748B', fontWeight: 600 }} 
+                      axisLine={{ stroke: '#E2E8F0' }}
+                    />
+                    <YAxis 
+                      stroke="#64748B" 
+                      tick={{ fontSize: 10, fill: '#64748B' }} 
+                      axisLine={{ stroke: '#E2E8F0' }}
+                      unit=" ppm·min"
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: '#FFFFFF',
+                        borderColor: '#CBD5E1',
+                        borderRadius: '10px',
+                        fontSize: '11px',
+                        fontFamily: 'monospace',
+                        boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+                        color: '#0F172A'
+                      }}
+                      formatter={(val: any) => [`${val} ppm·min`, 'Recorded Cumulative Exposure']}
+                      labelFormatter={(label) => `Date: ${label}`}
+                    />
+                    <ReferenceLine y={600} stroke="#F59E0B" strokeDasharray="4 4" label={{ value: 'Review Threshold (600 ppm·min)', fill: '#D97706', fontSize: 10, position: 'insideTopRight' }} />
+                    <Bar 
+                      dataKey="exposure_ppm_min" 
+                      radius={[6, 6, 0, 0]}
+                    >
+                      {dailyExposureData.map((entry, index) => {
+                        const color = entry.exposure_ppm_min >= 700 ? '#DC2626' : entry.exposure_ppm_min >= 550 ? '#D97706' : '#0284C7';
+                        return <Cell key={`cell-${index}`} fill={color} />;
+                      })}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="py-12 flex flex-col items-center justify-center text-center space-y-2 rounded-xl bg-slate-50 border border-dashed border-slate-200">
+                <Info className="w-6 h-6 text-slate-400" />
+                <div className="text-xs font-mono font-bold text-slate-700">
+                  No recorded exposure readings for this period.
+                </div>
+                <p className="text-[11px] text-slate-500 max-w-sm">
+                  Zero exposure readings have been logged for {currentWorker?.name || 'this operator'} in the last {selectedPeriod} days.
+                </p>
+              </div>
+            )}
+
+            <div className="flex items-center gap-2 p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-600">
+              <Info className="w-3.5 h-3.5 text-sky-600 shrink-0" />
+              <span>
+                <strong>Metrology Notice:</strong> Values represent sum of recorded passive exposure estimates during the selected period. They do not represent air concentration or instantaneous ppm.
+              </span>
+            </div>
+          </div>
+
+          {/* Bottom Card: Shift Exposure Log Table */}
+          <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <div className="flex items-center space-x-2">
+                <History className="w-4 h-4 text-slate-500" />
+                <h3 className="text-sm font-bold text-slate-900 font-sans">
+                  Detailed Occupational Exposure Log
+                </h3>
+              </div>
+              <span className="text-xs font-mono text-slate-500">
+                {readings.length} reading(s) recorded
               </span>
             </div>
 
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs font-sans">
                 <thead>
-                  <tr className="border-b border-figma-border text-[11px] font-mono text-figma-textMuted uppercase tracking-wider">
-                    <th className="pb-3 font-semibold">TIMESTAMP</th>
-                    <th className="pb-3 font-semibold">CUMULATIVE DOSE</th>
-                    <th className="pb-3 font-semibold">8H TWA</th>
-                    <th className="pb-3 font-semibold">CONFIDENCE</th>
-                    <th className="pb-3 font-semibold">STATUS</th>
-                    <th className="pb-3 font-semibold">DATA TYPE</th>
+                  <tr className="border-b border-slate-200 text-[11px] font-mono text-slate-500 uppercase tracking-wider bg-slate-50/50">
+                    <th className="py-2.5 px-3 font-semibold">TIMESTAMP</th>
+                    <th className="py-2.5 px-3 font-semibold">CUMULATIVE DOSE</th>
+                    <th className="py-2.5 px-3 font-semibold">8H TWA</th>
+                    <th className="py-2.5 px-3 font-semibold">CONFIDENCE</th>
+                    <th className="py-2.5 px-3 font-semibold">STATUS</th>
+                    <th className="py-2.5 px-3 font-semibold">DATA TYPE</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-figma-border/40">
+                <tbody className="divide-y divide-slate-100">
                   {readings.length > 0 ? (
                     readings.map((reading) => (
                       <tr
                         key={reading.id}
                         onClick={() => onSelectReading(reading)}
-                        className="hover:bg-figma-card/80 cursor-pointer transition-colors"
+                        className="hover:bg-slate-50 cursor-pointer transition-colors"
                       >
-                        <td className="py-3.5 font-mono text-white font-bold">
-                          {new Date(reading.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        <td className="py-3 px-3 font-mono text-slate-900 font-bold">
+                          {new Date(reading.timestamp).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                         </td>
-                        <td className="py-3.5 font-mono text-white font-bold">
-                          {reading.estimated_dose.toFixed(1)} ppm·min
+                        <td className="py-3 px-3 font-mono text-slate-900 font-bold">
+                          {reading.estimated_dose.toFixed(0)} <span className="text-[10px] font-normal text-slate-500">ppm·min</span>
                         </td>
-                        <td className="py-3.5 font-mono text-figma-textSecondary">
+                        <td className="py-3 px-3 font-mono text-slate-600">
                           {reading.equivalent_8h_twa_ppm.toFixed(2)} ppm
                         </td>
-                        <td className="py-3.5 font-mono text-emerald-400">
+                        <td className="py-3 px-3 font-mono text-emerald-700 font-semibold">
                           {reading.confidence_pct}%
                         </td>
-                        <td className="py-3.5">
-                          <div className="flex items-center space-x-1.5">
-                            {getStatusDot(reading.status)}
-                            {getStatusText(reading.status)}
-                          </div>
+                        <td className="py-3 px-3">
+                          {getStatusBadge(reading.status)}
                         </td>
-                        <td className="py-3.5 font-mono text-[10px] text-figma-accent">
+                        <td className="py-3 px-3 font-mono text-[10px] text-sky-700">
                           {reading.data_status || 'SIMULATED'}
                         </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={6} className="py-8 text-center text-xs font-mono text-figma-textMuted">
-                        No exposure readings recorded yet for this operator.
+                      <td colSpan={6} className="py-8 text-center text-xs font-mono text-slate-400">
+                        No recorded exposure readings for this worker.
                       </td>
                     </tr>
                   )}
@@ -537,16 +649,16 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
 
       {/* Add Worker Modal */}
       {showAddWorkerModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-figma-surface border border-figma-border rounded-2xl max-w-md w-full p-6 shadow-2xl animate-fadeIn">
-            <div className="flex items-center justify-between pb-3 border-b border-figma-border mb-4">
-              <h3 className="text-base font-bold text-white font-mono flex items-center gap-2">
-                <User className="w-4 h-4 text-figma-accent" />
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-6 shadow-xl animate-fadeIn">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200 mb-4">
+              <h3 className="text-base font-bold text-slate-900 font-sans flex items-center gap-2">
+                <User className="w-4 h-4 text-sky-600" />
                 Add New Industrial Worker
               </h3>
               <button
                 onClick={() => setShowAddWorkerModal(false)}
-                className="text-figma-textMuted hover:text-white"
+                className="text-slate-400 hover:text-slate-700"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -554,67 +666,67 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
 
             <form onSubmit={handleCreateWorker} className="space-y-3.5 text-xs">
               {modalError && (
-                <div className="p-2.5 rounded bg-red-950/80 border border-red-500 text-red-300">
+                <div className="p-2.5 rounded-lg bg-red-50 border border-red-200 text-red-700">
                   {modalError}
                 </div>
               )}
               {modalSuccess && (
-                <div className="p-2.5 rounded bg-emerald-950/80 border border-emerald-500 text-emerald-300">
+                <div className="p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700">
                   {modalSuccess}
                 </div>
               )}
 
               <div>
-                <label className="text-figma-textMuted block mb-1">Full Name *</label>
+                <label className="text-slate-600 block mb-1 font-semibold">Full Name *</label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. Arun Kumar"
                   value={newWorkerName}
                   onChange={(e) => setNewWorkerName(e.target.value)}
-                  className="w-full px-3 py-2 rounded bg-black/40 border border-figma-border text-white text-xs font-mono focus:outline-none focus:border-figma-accent"
+                  className="w-full px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 text-xs font-sans focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
                 />
               </div>
 
               <div>
-                <label className="text-figma-textMuted block mb-1">Employee ID *</label>
+                <label className="text-slate-600 block mb-1 font-semibold">Employee ID *</label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. MRPL-W-001"
+                  placeholder="e.g. MRPL-EMP-4091"
                   value={newWorkerEmpId}
                   onChange={(e) => setNewWorkerEmpId(e.target.value)}
-                  className="w-full px-3 py-2 rounded bg-black/40 border border-figma-border text-white text-xs font-mono focus:outline-none focus:border-figma-accent"
+                  className="w-full px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 text-xs font-mono focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-figma-textMuted block mb-1">Department</label>
+                  <label className="text-slate-600 block mb-1 font-semibold">Department</label>
                   <input
                     type="text"
                     value={newWorkerDept}
                     onChange={(e) => setNewWorkerDept(e.target.value)}
-                    className="w-full px-3 py-2 rounded bg-black/40 border border-figma-border text-white text-xs font-mono focus:outline-none focus:border-figma-accent"
+                    className="w-full px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 text-xs font-sans focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
                   />
                 </div>
                 <div>
-                  <label className="text-figma-textMuted block mb-1">Unit / Area</label>
+                  <label className="text-slate-600 block mb-1 font-semibold">Unit / Area</label>
                   <input
                     type="text"
                     value={newWorkerUnit}
                     onChange={(e) => setNewWorkerUnit(e.target.value)}
-                    className="w-full px-3 py-2 rounded bg-black/40 border border-figma-border text-white text-xs font-mono focus:outline-none focus:border-figma-accent"
+                    className="w-full px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 text-xs font-sans focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="text-figma-textMuted block mb-1">Shift</label>
+                <label className="text-slate-600 block mb-1 font-semibold">Shift</label>
                 <select
                   value={newWorkerShift}
                   onChange={(e) => setNewWorkerShift(e.target.value)}
-                  className="w-full px-3 py-2 rounded bg-black/40 border border-figma-border text-white text-xs font-mono focus:outline-none focus:border-figma-accent"
+                  className="w-full px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 text-xs font-sans focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
                 >
                   <option value="Shift A (Morning 06:00 - 14:00)">Shift A (Morning 06:00 - 14:00)</option>
                   <option value="Shift B (Afternoon 14:00 - 22:00)">Shift B (Afternoon 14:00 - 22:00)</option>
@@ -624,13 +736,13 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
               </div>
 
               <div>
-                <label className="text-figma-textMuted block mb-1">Contact Phone (Optional)</label>
+                <label className="text-slate-600 block mb-1 font-semibold">Contact Phone (Optional)</label>
                 <input
                   type="text"
-                  placeholder="e.g. +91 98765 43210"
+                  placeholder="e.g. +91 98450 12041"
                   value={newWorkerPhone}
                   onChange={(e) => setNewWorkerPhone(e.target.value)}
-                  className="w-full px-3 py-2 rounded bg-black/40 border border-figma-border text-white text-xs font-mono focus:outline-none focus:border-figma-accent"
+                  className="w-full px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 text-xs font-sans focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
                 />
               </div>
 
@@ -638,13 +750,13 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowAddWorkerModal(false)}
-                  className="px-4 py-2 rounded bg-figma-card border border-figma-border text-figma-textSecondary hover:text-white"
+                  className="px-4 py-2 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-semibold"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded bg-figma-accent text-black font-bold hover:bg-figma-accent/90"
+                  className="px-5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs"
                 >
                   Create Worker
                 </button>
@@ -656,16 +768,16 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
 
       {/* Assign Badge Modal */}
       {showAssignBadgeModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-figma-surface border border-figma-border rounded-2xl max-w-md w-full p-6 shadow-2xl animate-fadeIn">
-            <div className="flex items-center justify-between pb-3 border-b border-figma-border mb-4">
-              <h3 className="text-base font-bold text-white font-mono flex items-center gap-2">
-                <KeyRound className="w-4 h-4 text-figma-accent" />
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-6 shadow-xl animate-fadeIn">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200 mb-4">
+              <h3 className="text-base font-bold text-slate-900 font-sans flex items-center gap-2">
+                <KeyRound className="w-4 h-4 text-sky-600" />
                 Assign Physical Badge ID
               </h3>
               <button
                 onClick={() => setShowAssignBadgeModal(false)}
-                className="text-figma-textMuted hover:text-white"
+                className="text-slate-400 hover:text-slate-700"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -673,68 +785,68 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
 
             <form onSubmit={handleAssignBadge} className="space-y-3.5 text-xs">
               {modalError && (
-                <div className="p-2.5 rounded bg-red-950/80 border border-red-500 text-red-300">
+                <div className="p-2.5 rounded-lg bg-red-50 border border-red-200 text-red-700">
                   {modalError}
                 </div>
               )}
               {modalSuccess && (
-                <div className="p-2.5 rounded bg-emerald-950/80 border border-emerald-500 text-emerald-300">
+                <div className="p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700">
                   {modalSuccess}
                 </div>
               )}
 
-              <div className="p-3 rounded bg-black/40 border border-figma-border text-figma-textSecondary">
-                Assigning to operator: <strong className="text-white font-mono">{currentWorker?.name} ({currentWorker?.employee_id})</strong>
+              <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 text-slate-700">
+                Assigning to operator: <strong className="text-slate-900 font-mono">{currentWorker?.name} ({currentWorker?.employee_id})</strong>
               </div>
 
               <div>
-                <label className="text-figma-textMuted block mb-1">Badge ID (QR Code Content) *</label>
+                <label className="text-slate-600 block mb-1 font-semibold">Badge ID (QR Code Content) *</label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. H2S-BDG-000001"
+                  placeholder="e.g. H2S-BDG-2026-000381"
                   value={badgeIdInput}
                   onChange={(e) => setBadgeIdInput(e.target.value)}
-                  className="w-full px-3 py-2 rounded bg-black/40 border border-figma-border text-white text-xs font-mono focus:outline-none focus:border-figma-accent"
+                  className="w-full px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 text-xs font-mono focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-figma-textMuted block mb-1">Batch Number</label>
+                  <label className="text-slate-600 block mb-1 font-semibold">Batch Number</label>
                   <input
                     type="text"
                     value={badgeBatchNo}
                     onChange={(e) => setBadgeBatchNo(e.target.value)}
-                    className="w-full px-3 py-2 rounded bg-black/40 border border-figma-border text-white text-xs font-mono focus:outline-none focus:border-figma-accent"
+                    className="w-full px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 text-xs font-mono focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
                   />
                 </div>
                 <div>
-                  <label className="text-figma-textMuted block mb-1">Shelf Validity (Days)</label>
+                  <label className="text-slate-600 block mb-1 font-semibold">Shelf Validity (Days)</label>
                   <input
                     type="number"
                     value={badgeExpiryDays}
                     onChange={(e) => setBadgeExpiryDays(Number(e.target.value))}
-                    className="w-full px-3 py-2 rounded bg-black/40 border border-figma-border text-white text-xs font-mono focus:outline-none focus:border-figma-accent"
+                    className="w-full px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 text-xs font-mono focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
                   />
                 </div>
               </div>
 
-              <div className="p-2.5 rounded bg-figma-card text-[11px] font-mono text-figma-textMuted">
-                Calibration Model: <span className="text-figma-accent">CAL-v0.1-demo</span>
+              <div className="p-2.5 rounded-lg bg-slate-50 text-[11px] font-mono text-slate-500">
+                Calibration Model: <span className="text-sky-700 font-semibold">CAL-v0.1-demo</span>
               </div>
 
               <div className="pt-2 flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setShowAssignBadgeModal(false)}
-                  className="px-4 py-2 rounded bg-figma-card border border-figma-border text-figma-textSecondary hover:text-white"
+                  className="px-4 py-2 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-semibold"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded bg-figma-accent text-black font-bold hover:bg-figma-accent/90"
+                  className="px-5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs"
                 >
                   Assign Badge
                 </button>

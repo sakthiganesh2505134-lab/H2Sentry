@@ -147,8 +147,8 @@ def extract_strip_color_features(
                 slices.append((darkness, s_roi, med_b, med_g, med_r, std_b, std_g, std_r))
         
         if slices:
-            # Select the segment representing the active reacted zone (lowest luminance / highest chemical darkening)
-            best_slice = min(slices, key=lambda s: s[0])
+            # Select the segment representing the active reacted zone (lowest luminance and highest uniformity)
+            best_slice = min(slices, key=lambda s: (round(s[0], 1), s[5] + s[6] + s[7]))
             raw_b_med = best_slice[2]
             raw_g_med = best_slice[3]
             raw_r_med = best_slice[4]
@@ -185,11 +185,19 @@ def extract_strip_color_features(
     uniformity = max(0.1, min(1.0, 1.0 - (mean_std / 35.0)))
 
     # 7. Chemical Membrane Presence Validation
-    has_chemical_membrane = (b_star >= 2.5 or (cal_r >= cal_b + 8.0) or L_star < 85.0) and mean_std < 55.0
+    # Real unexposed reagent has b* >= 5.0 and (R - B >= 14); reacted strips have lower L* < 90.0.
+    # Blank plastic card wells have L* > 93.0, b* < 3.5, and low saturation < 4.0%.
+    is_blank_plastic = (L_star > 93.0 and b_star < 3.5 and (cal_r - cal_b) < 10.0 and sat < 4.0)
+    has_chemical_membrane = (not is_blank_plastic) and (
+        (b_star >= 4.0 and (cal_r >= cal_b + 10.0)) or 
+        (L_star < 90.0) or 
+        (delta_e >= 12.0 and L_star < 92.0)
+    ) and mean_std < 65.0
+
     if not has_chemical_membrane:
         return {
             "success": False,
-            "error": "Chemical reaction strip not detected or unreadable."
+            "error": "REACTION STRIP NOT DETECTED: Chemical reaction strip not detected or unreadable."
         }
     
     return {

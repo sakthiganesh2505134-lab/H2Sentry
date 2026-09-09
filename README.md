@@ -1,34 +1,34 @@
 # H2Sentry — Passive Exposure Intelligence
 
-> **Passive Cumulative H2S Exposure Dosimeter System**  
+> **Passive Cumulative H₂S Exposure Dosimeter with Quantitative Computer Vision & ML Calibration**  
 > Problem Statement SIH26118 | Mangalore Refinery and Petrochemicals Limited (MRPL)
 
 ---
 
-## 1. Product Identity & Philosophy
+## 1. Product Identity & Scientific Philosophy
 
-**H2Sentry** is a passive cumulative $\text{H}_2\text{S}$ exposure dosimeter system that combines a disposable colorimetric badge/wristband with smartphone computer vision to estimate cumulative exposure dose and digitally record the result against the worker, badge, and shift.
+**H2Sentry** is an occupational passive cumulative $\text{H}_2\text{S}$ exposure dosimeter system combining disposable colorimetric wristbands/badges with smartphone computer vision to estimate cumulative exposure dose ($\text{ppm}\cdot\text{min}$) and digitally record verified dosimetry records against the worker, badge, and shift.
 
 ### The 4 Physical Badge Operational Layers:
-1. **Unique QR / DataMatrix** — *Identity Layer (WHO / WHICH BADGE)*: Encodes only the unique Badge ID (e.g. `H2S-BDG-000001`). The backend resolves the worker, employee ID, plant unit, shift, and validity timestamps without exposing sensitive worker PII inside the physical QR code.
-2. **Printed Reference Colour Scale** — *Lighting Normalization Layer (OPTICAL CALIBRATION)*: Six calibrated reference patches (White, Light Gray, Mid Gray, Dark Gray, Cyan, Amber) normalize for ambient lux, white balance shifts, and smartphone sensor variations before measuring chemical reaction.
-3. **$\text{H}_2\text{S}$ Reaction Chemical Strip** — *Exposure Sensing Layer (WHAT EXPOSURE OCCURRED)*: Porous metal-salt matrix undergoes irreversible proportional darkening upon passive diffusion of $\text{H}_2\text{S}$ gas over time. The chemical response records cumulative exposure dose ($\text{ppm}\cdot\text{min}$).
-4. **Expiry / Shelf-Life Indicator** — *Integrity Layer (IS BADGE STILL VALID)*: Separate chemical indicator transitions from green (valid) to amber (expiring soon) to red (expired), ensuring stale or oxidized badges are flagged before recording occupational dose.
+1. **Unique QR / DataMatrix** — *Identity Layer (WHO / WHICH BADGE)*: Encodes only the unique Badge ID (e.g. `MRPL-H2S-8821`). The server-side registry maps the worker, employee ID, plant unit, shift, and validity timestamps without exposing worker PII inside the QR code.
+2. **Digital Reference-Scale & In-App Optical Normalization** — *Lighting Normalization Layer*: In-app digital calibration standards normalize ambient lux, channel gains, white balance shifts, and mobile sensor curves before measuring chemical reaction.
+3. **$\text{H}_2\text{S}$ Reaction Chemical Strip** — *Exposure Sensing Layer (WHAT EXPOSURE OCCURRED)*: Porous metal-salt matrix undergoes irreversible proportional darkening upon passive diffusion of $\text{H}_2\text{S}$ gas over time. The response records cumulative exposure dose ($\text{ppm}\cdot\text{min}$).
+4. **Expiry / Shelf-Life Indicator** — *Integrity Layer (IS BADGE VALID)*: Dedicated indicator transitions from green (valid) to amber (expiring soon) to red (expired), ensuring stale or oxidized badges are flagged before recording occupational dose.
 
 ---
 
 ## 2. Modes of Operation
 
-H2Sentry strictly separates **Clean Normal Mode** from **Deterministic Demo Mode**:
+H2Sentry strictly separates **Clean Production Mode** from **Deterministic Demo Mode**:
 
-### A. Clean Normal Mode (Default Initial State)
-- **Zero random / fake worker names** on a fresh install or clean reset.
-- A new worker starts with **0 historical readings**.
+### A. Clean Production Mode (Default)
+- Zero fake worker names on a fresh database.
+- A new worker starts with 0 historical readings.
 - Supervisors add workers via the dashboard (`Add Worker`) and assign badges (`Assign Badge`).
-- Worker scans the QR code $\rightarrow$ camera opens $\rightarrow$ reading is analyzed and digitally committed to their shift record.
+- Worker scans the QR code $\rightarrow$ camera captures reaction strip $\rightarrow$ reading is analyzed and digitally committed to the PostgreSQL/SQLite database.
 
 ### B. Demo Mode (Deterministic Benchmark Scenarios)
-- Provides 7 deterministic benchmark presets for presentations and technical evaluation:
+- Provides deterministic benchmark presets for field demonstrations:
   1. `Clean` (0 ppm·min baseline)
   2. `Low Exposure` (150 ppm·min)
   3. `Moderate Exposure` (742 ppm·min)
@@ -36,162 +36,169 @@ H2Sentry strictly separates **Clean Normal Mode** from **Deterministic Demo Mode
   5. `Expired Badge` (Reagent integrity rejection)
   6. `Degraded Lighting` (Optical normalization demonstration)
   7. `Blurry Scan` (Quality control rejection)
-- All demo data is strictly tagged with `data_status="SIMULATED"`.
+- All prototype validation data is labeled with `data_status="SIMULATED"`.
 
 ---
 
 ## 3. Scientific Transparency & Prototype Status
 
 - **Estimated Cumulative Exposure**: The primary measurement is cumulative exposure dose ($\text{ppm}\cdot\text{min}$) and equivalent 8-hour TWA ($\text{ppm}$).
-- **Calibration Version**: `CAL-v0.1-demo`. Synthetic calibration metrics are labeled as simulated demonstration models.
+- **Calibration Version**: `CAL-v1.0-ml-gbr`.
 - **Safety Disclosures**:
   - H2Sentry is a **passive cumulative exposure dosimeter**, **NOT** an instantaneous real-time $\text{H}_2\text{S}$ alarm.
   - It is **NOT** a replacement for mandatory personal electronic $\text{H}_2\text{S}$ detectors.
   - It is **NOT** a medical diagnostic device.
-  - True quantitative field deployment requires empirical chamber calibration data across temperature and humidity profiles.
+  - Current color/dose training data is synthetic software-validation data. Quantitative field deployment requires controlled laboratory chamber calibration across temperature and humidity profiles.
 
 ---
 
-## 4. Local Development Setup
+## 4. Production Architecture
+
+```
+[ Worker Android Phone / PWA ]        [ Supervisor Desktop / Laptop ]
+             │                                       │
+             ▼ (HTTPS)                               ▼ (HTTPS)
+   ┌────────────────────────────────────────────────────────┐
+   │  Frontend Hosting (Vercel / Cloudflare / Netlify)       │
+   │  React 18 + Vite + TypeScript Mobile-First PWA         │
+   └──────────────────────────┬─────────────────────────────┘
+                              │
+                              ▼ (HTTPS REST API / JWT)
+   ┌────────────────────────────────────────────────────────┐
+   │  Backend API (Render / Railway / Docker / Fly.io)       │
+   │  FastAPI + Uvicorn + OpenCV Headless + Scikit-Learn     │
+   └──────────────────────────┬─────────────────────────────┘
+                              │
+                              ▼ (SQLAlchemy / Connection Pool)
+   ┌────────────────────────────────────────────────────────┐
+   │  Production Database (Render PostgreSQL / Supabase)    │
+   │  (Automatic SQLite fallback for local development)     │
+   └────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 5. Production Deployment Guide
 
 ### Prerequisites
-- **Python 3.10+** (with `pip` and virtual environment support)
-- **Node.js 18+** and `npm`
+- GitHub account with this repository
+- **Vercel** account (Frontend hosting)
+- **Render** account (Backend API + PostgreSQL hosting)
 
-### Step 1: Clone & Setup Backend
+---
+
+### Step 1: Deploy PostgreSQL Database (Render)
+1. In the Render Dashboard, click **New +** $\rightarrow$ **PostgreSQL**.
+2. **Name**: `h2sentry-db`
+3. **Database**: `h2sentry`
+4. **User**: `h2sentry_user`
+5. **Region**: Closest to your location (e.g., Singapore / Frankfurt / Oregon).
+6. **Plan**: Free.
+7. Click **Create Database**.
+8. Once provisioned, copy the **Internal Database URL** (or **External Database URL** if hosting backend elsewhere). Example:
+   `postgresql://h2sentry_user:password@dpg-xxxx.singapore-postgres.render.com/h2sentry`
+
+---
+
+### Step 2: Deploy Backend Web Service (Render)
+1. In the Render Dashboard, click **New +** $\rightarrow$ **Web Service**.
+2. Connect your GitHub repository: `H2Sentry`.
+3. Configure settings:
+   - **Name**: `h2sentry-api`
+   - **Region**: Same as database.
+   - **Branch**: `main`
+   - **Root Directory**: `.` (leave blank or enter `.`)
+   - **Runtime**: `Python 3`
+   - **Build Command**: `pip install -r requirements.txt`
+   - **Start Command**: `uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT`
+4. **Environment Variables**:
+   | Variable | Value |
+   |---|---|
+   | `ENVIRONMENT` | `production` |
+   | `DATABASE_URL` | *(Paste your PostgreSQL URL from Step 1)* |
+   | `JWT_SECRET` | *(Generate a 32-byte hex key, e.g. `openssl rand -hex 32`)* |
+   | `ALLOWED_ORIGINS` | `*` *(or your Vercel frontend URL once created)* |
+5. Click **Deploy Web Service**.
+6. Note your deployed Backend URL: `https://h2sentry-api.onrender.com`.
+7. Verify health: visit `https://h2sentry-api.onrender.com/health` $\rightarrow$ should return `{"status": "ok"}`.
+
+---
+
+### Step 3: Deploy Frontend Web Application (Vercel)
+1. In the Vercel Dashboard, click **Add New...** $\rightarrow$ **Project**.
+2. Import the `H2Sentry` repository from GitHub.
+3. Configure project:
+   - **Framework Preset**: `Vite`
+   - **Root Directory**: Click Edit $\rightarrow$ select `frontend` $\rightarrow$ click Continue.
+   - **Build Command**: `npm run build`
+   - **Output Directory**: `dist`
+4. **Environment Variables**:
+   | Variable | Value |
+   |---|---|
+   | `VITE_API_BASE_URL` | `https://h2sentry-api.onrender.com` *(your Render backend URL)* |
+5. Click **Deploy**.
+6. Once deployed, note your production URL: `https://h2sentry.vercel.app`.
+7. (Optional): Go back to your Render backend service, and update `ALLOWED_ORIGINS` to `https://h2sentry.vercel.app`.
+
+---
+
+## 6. Mobile Phone Testing & Android PWA Installation
+
+1. Open your deployed URL on an Android device: `https://h2sentry.vercel.app`.
+2. Chrome will display the **"Install H2Sentry"** banner or option in the menu ($\vdots \rightarrow$ *Add to Home screen*).
+3. Tap **Quick Login** as Worker `EMP1024` (Ravi Kumar).
+4. Tap **SCAN BADGE** $\rightarrow$ Grant camera permission.
+5. Scan the wristband QR code $\rightarrow$ Camera opens in optical dosimeter viewfinder.
+6. Capture and analyze the colorimetric strip $\rightarrow$ Estimated cumulative exposure in $\text{ppm}\cdot\text{min}$ is calculated and committed to your permanent dossier.
+
+---
+
+## 7. Local Development Setup
+
+### Backend (Python)
 ```bash
-# Navigate to workspace
+# Clone & navigate
+git clone https://github.com/your-username/H2Sentry.git
 cd H2Sentry
 
-# Create and activate Python virtual environment
+# Create virtual environment
 python -m venv venv
-# On Windows:
-.\venv\Scripts\activate
-# On Linux/macOS:
-# source venv/bin/activate
+.\venv\Scripts\activate  # Windows
+# source venv/bin/activate # Linux/macOS
 
 # Install dependencies
-pip install fastapi uvicorn pydantic opencv-python numpy pytest
+pip install -r requirements.txt
 
-# Initialize / Seed database (optional for demo mode):
-python -m backend.app.database.seed
-
-# Start FastAPI backend on http://127.0.0.1:8000
+# Start backend server
 python -m uvicorn backend.app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-### Step 2: Setup & Start Frontend
+### Frontend (Node.js)
 ```bash
-# In a new terminal window:
-cd H2Sentry/frontend
-
-# Install dependencies
+cd frontend
 npm install
-
-# Start Vite dev server on http://localhost:5173
 npm run dev
+# Open https://localhost:5173 or http://localhost:5173
 ```
 
 ---
 
-## 5. Production Build & Deployment Guide
-
-### Frontend Production Build
-```bash
-cd H2Sentry/frontend
-npm run build
-# Output bundle is generated in H2Sentry/frontend/dist/
-```
-
-### Environment Configuration (`VITE_API_BASE_URL`)
-The frontend dynamically reads `VITE_API_BASE_URL` from its environment:
-- **Local Development**: `VITE_API_BASE_URL=/api` (proxied by Vite to `http://127.0.0.1:8000`).
-- **Production Cloud Hosting**: Set `VITE_API_BASE_URL=https://your-backend-service.onrender.com/api`.
-
-### Deploying Frontend (Vercel / Netlify / Cloudflare Pages)
-1. Link your Git repository or upload the `frontend/` folder.
-2. **Framework Preset**: Vite / React.
-3. **Build Command**: `npm run build`
-4. **Output Directory**: `dist`
-5. **Environment Variable**: `VITE_API_BASE_URL=https://<your-deployed-backend-url>/api`
-
-### Deploying Backend (Render / Railway / Fly.io)
-1. Deploy from the root directory using Python environment.
-2. **Start Command**: `uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT`
-3. **Python Version**: 3.10+
-4. **Environment Variables**:
-   - `HOST=0.0.0.0`
-   - `PORT=8000`
-   - `DATABASE_URL=sqlite:///./backend/data/h2sentry.db`
-
-### HTTPS Requirement for Mobile Camera Access
-> [!IMPORTANT]
-> Modern mobile web browsers (Safari iOS, Chrome Android) require a **secure origin (`https://` or `localhost`)** to grant access to the device camera (`navigator.mediaDevices.getUserMedia`). Ensure your deployed frontend URL is served over HTTPS.
-
----
-
-## 6. Running Tests
+## 8. Automated Testing & Verification
 
 ```bash
-# Run all backend unit & integration tests
+# Run backend pytest suite (45/45 tests)
 python -m pytest backend/tests -v
+
+# Run frontend TypeScript build
+cd frontend
+npm run build
 ```
 
 ---
 
-## 7. Architecture Overview
-
-```
-H2Sentry/
-├── backend/
-│   ├── app/
-│   │   ├── api/
-│   │   │   ├── endpoints/
-│   │   │   │   ├── badges.py       # QR badge lookup & lifecycle
-│   │   │   │   ├── cv.py           # Computer vision analysis endpoint
-│   │   │   │   ├── demo.py         # Seed & reset database endpoints
-│   │   │   │   ├── readings.py     # Reading submission & retrieval
-│   │   │   │   └── workers.py      # Worker CRUD & dossier endpoints
-│   │   │   ├── database/
-│   │   │   │   ├── models.py       # SQLAlchemy ORM (Worker, Badge, Reading, CalibrationSample)
-│   │   │   │   ├── session.py      # SQLite connection & schema initializer
-│   │   │   │   └── seed.py         # Deterministic benchmark sample generator
-│   │   │   └── schemas/            # Pydantic validation schemas
-│   │   └── main.py                 # FastAPI application factory & CORS configuration
-│   ├── cv/
-│   │   ├── exposure_engine.py      # Colorimetric kinetics & CIE L*a*b* dose estimation
-│   │   └── image_processor.py      # OpenCV badge, reference scale, & strip detection
-│   └── tests/
-│       └── test_api.py             # 18 automated unit and integration tests
-│
-└── frontend/
-    ├── public/
-    │   ├── manifest.json           # Mobile PWA configuration
-    │   └── favicon.svg             # Application brand icon
-    └── src/
-        ├── components/
-        │   ├── public/
-        │   │   └── LandingView.tsx # Public awareness & educational showcase
-        │   ├── worker/             # Mobile PWA Worker Experience
-        │   │   ├── WorkerLayout.tsx
-        │   │   ├── WorkerHomeView.tsx
-        │   │   ├── WorkerQrScanView.tsx      # Step 1: QR identity bridge
-        │   │   ├── WorkerCameraScanView.tsx  # Step 2: Optical camera capture
-        │   │   ├── WorkerScanResultView.tsx  # Step 3: Dose + 12-step trace
-        │   │   ├── WorkerHistoryView.tsx     # Historical exposure log
-        │   │   └── WorkerProfileView.tsx     # Worker profile & badge status
-        │   ├── supervisor/         # Desktop Supervisor Portal
-        │   ├── DashboardView.tsx   # Attention-required alerts & shift statistics
-        │   ├── WorkforceView.tsx   # Worker CRUD, badge assignment & dossier
-        │   ├── CalibrationLabView.tsx # Calibration curve & sensor science
-        │   └── ReadingDetailModal.tsx # Full technical reading trace modal
-        └── services/
-            └── api.ts              # Resilient REST API client with VITE_API_BASE_URL support
-```
-
----
-
-## 8. SIH 2026 Submission Details
-- **Organization**: Mangalore Refinery and Petrochemicals Limited (MRPL)
+## 9. SIH 2026 Submission Details
 - **Problem Statement Code**: SIH26118
-- **Core Technology**: Passive Chemical Sensing + Smartphone Computer Vision + Reference-Based Optical Calibration + Cumulative Occupational Exposure Records.
+- **Organization**: Mangalore Refinery and Petrochemicals Limited (MRPL)
+- **Domain**: Smart Industrial Safety & Worker Health Monitoring
+- **Core Technology**: Passive Porous Matrix $\text{H}_2\text{S}$ Sensing + Optical Color Normalization + Gradient Boosting ML Regressor + Mobile PWA + Industrial Supervisor Dashboard.
+

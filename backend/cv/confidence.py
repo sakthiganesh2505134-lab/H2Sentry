@@ -18,55 +18,30 @@ def calculate_confidence_score(
     detection_confidences: Dict[str, float],
     calibration_quality: float,
     uniformity_score: float,
-    expiry_status: str
+    expiry_status: str,
+    has_physical_reference: bool = False
 ) -> Dict[str, Any]:
     """
     Computes weighted confidence score and detailed factor breakdown.
+    Supports standard digital model calibration (no physical scale penalty)
+    and physical reference target calibration.
     """
     factors: Dict[str, Any] = {}
     warnings: List[str] = []
     
     # 1. Image Quality Factor [0.0 - 1.0]
     img_q = float(image_quality.get("score", 0.0))
-    factors["image_quality"] = {
-        "score": round(img_q, 3),
-        "weight": 0.25,
-        "description": "Image sharpness, dynamic range, and illumination stability."
-    }
     
-    # 2. Reference Scale Detection Factor
-    ref_det = float(detection_confidences.get("reference", 0.0))
-    factors["reference_detection"] = {
-        "score": round(ref_det, 3),
-        "weight": 0.20,
-        "description": "Geometric and optical identification of the 6-patch reference target."
-    }
-    
-    # 3. Reaction Strip Detection Factor
+    # 2. Reaction Strip Detection Factor
     strip_det = float(detection_confidences.get("reaction_strip", 0.0))
-    factors["reaction_strip_detection"] = {
-        "score": round(strip_det, 3),
-        "weight": 0.20,
-        "description": "Segmentation and boundary isolation of the active chemical membrane."
-    }
     
-    # 4. Calibration Fit Quality Factor
+    # 3. Calibration Fit Quality Factor
     cal_q = max(0.0, min(1.0, float(calibration_quality)))
-    factors["color_calibration"] = {
-        "score": round(cal_q, 3),
-        "weight": 0.15,
-        "description": "Least-squares lighting transformation matrix accuracy."
-    }
     
-    # 5. Chemical Uniformity Factor
+    # 4. Chemical Uniformity Factor
     unif_q = max(0.0, min(1.0, float(uniformity_score)))
-    factors["spatial_uniformity"] = {
-        "score": round(unif_q, 3),
-        "weight": 0.10,
-        "description": "Homogeneity of reagent color across the central sensing aperture."
-    }
     
-    # 6. Expiry Factor
+    # 5. Expiry Factor
     if expiry_status == "VALID":
         exp_factor = 1.0
     elif expiry_status == "EXPIRING_SOON":
@@ -77,22 +52,72 @@ def calculate_confidence_score(
         warnings.append("CRITICAL: Badge chemistry is expired. Quantitative exposure reading is untrustworthy.")
     else:
         exp_factor = 0.50
-        
+
+    if has_physical_reference:
+        ref_det = float(detection_confidences.get("reference", 0.0))
+        factors["image_quality"] = {
+            "score": round(img_q, 3),
+            "weight": 0.25,
+            "description": "Image sharpness, dynamic range, and illumination stability."
+        }
+        factors["reference_detection"] = {
+            "score": round(ref_det, 3),
+            "weight": 0.20,
+            "description": "Physical reference scale optical segmentation."
+        }
+        factors["reaction_strip_detection"] = {
+            "score": round(strip_det, 3),
+            "weight": 0.20,
+            "description": "Segmentation and boundary isolation of the active chemical membrane."
+        }
+        factors["color_calibration"] = {
+            "score": round(cal_q, 3),
+            "weight": 0.15,
+            "description": "Least-squares optical lighting matrix fit quality."
+        }
+        raw_confidence = (
+            img_q * 0.25 +
+            ref_det * 0.20 +
+            strip_det * 0.20 +
+            cal_q * 0.15 +
+            unif_q * 0.10 +
+            exp_factor * 0.10
+        )
+    else:
+        # Standard H2Sentry Wristband (Digital Reference Scale & Software Calibration)
+        factors["image_quality"] = {
+            "score": round(img_q, 3),
+            "weight": 0.30,
+            "description": "Image sharpness, dynamic range, and illumination stability."
+        }
+        factors["reaction_strip_detection"] = {
+            "score": round(strip_det, 3),
+            "weight": 0.30,
+            "description": "Segmentation and boundary isolation of the active chemical membrane."
+        }
+        factors["color_calibration"] = {
+            "score": round(cal_q, 3),
+            "weight": 0.20,
+            "description": "Digital model baseline calibration & software normalization."
+        }
+        raw_confidence = (
+            img_q * 0.30 +
+            strip_det * 0.30 +
+            cal_q * 0.20 +
+            unif_q * 0.10 +
+            exp_factor * 0.10
+        )
+
+    factors["spatial_uniformity"] = {
+        "score": round(unif_q, 3),
+        "weight": 0.10,
+        "description": "Homogeneity of reagent color across the sensing aperture."
+    }
     factors["badge_validity"] = {
         "score": round(exp_factor, 3),
         "weight": 0.10,
         "description": "Chemical shelf-life indicator integrity."
     }
-
-    # Base weighted sum
-    raw_confidence = (
-        img_q * 0.25 +
-        ref_det * 0.20 +
-        strip_det * 0.20 +
-        cal_q * 0.15 +
-        unif_q * 0.10 +
-        exp_factor * 0.10
-    )
 
     # If badge is expired or image is invalid, cap confidence
     if expiry_status == "EXPIRED":

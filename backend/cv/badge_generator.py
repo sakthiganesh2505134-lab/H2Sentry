@@ -143,32 +143,42 @@ def generate_badge_image(
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (140, 145, 150), 1, cv2.LINE_AA)
 
     # ------------------------------------------------------------------
-    # Zone 2: H2S Reaction Chemical Exposure Strip (Center / Lower Section)
+    # Zone 2: Small 8mm x 4mm (2:1 aspect ratio) Reaction Strip in Reaction Well
     # Box: x ~ [60, 500], y ~ [215, 395]
     # ------------------------------------------------------------------
     strip_x, strip_y = margin + 30, margin + 185
     strip_w, strip_h = width - 2 * margin - 260, 180
     cv2.rectangle(img, (strip_x, strip_y), (strip_x + strip_w, strip_y + strip_h), (240, 242, 245), -1)
     cv2.rectangle(img, (strip_x, strip_y), (strip_x + strip_w, strip_y + strip_h), (140, 145, 150), 2)
-    cv2.putText(img, "[REACTION STRIP] H2S CHEMICAL EXPOSURE MATRIX", (strip_x + 10, strip_y - 8),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.45, (80, 90, 100), 1, cv2.LINE_AA)
+    cv2.putText(img, "[REACTION STRIP] H2S CHEMICAL EXPOSURE MATRIX (8x4mm 2:1)", (strip_x + 10, strip_y - 8),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.42, (80, 90, 100), 1, cv2.LINE_AA)
     
     if include_strip:
-        # Inner active chemical porous membrane
-        mem_margin = 16
-        mx, my, mw, mh = strip_x + mem_margin, strip_y + mem_margin, strip_w - 2 * mem_margin, strip_h - 2 * mem_margin
+        # Chemical reaction strip with 2:1 aspect ratio (260 x 130 px centered in the well)
+        patch_w = 260
+        patch_h = 130
+        mx = strip_x + (strip_w - patch_w) // 2
+        my = strip_y + (strip_h - patch_h) // 2
+        
         r_strip, g_strip, b_strip = dose_to_strip_color(dose_ppm_min)
-        
-        # Active reagent color fill (BGR) with slight natural chemical texture
         reagent_bgr = (b_strip, g_strip, r_strip)
-        cv2.rectangle(img, (mx, my), (mx + mw, my + mh), reagent_bgr, -1)
-        cv2.rectangle(img, (mx, my), (mx + mw, my + mh), (100, 105, 110), 1)
         
-        # Sub-text on strip membrane
-        cv2.putText(img, "H2S ACTIVE ZONE", (mx + 15, my + mh // 2),
-                    cv2.FONT_HERSHEY_DUPLEX, 0.6, (20, 20, 20) if r_strip > 120 else (220, 220, 220), 1, cv2.LINE_AA)
-        cv2.putText(img, "CUMULATIVE SENSING MEMBRANE", (mx + 15, my + mh // 2 + 25),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.4, (40, 40, 40) if r_strip > 120 else (190, 190, 190), 1, cv2.LINE_AA)
+        # Draw rounded 2:1 reaction strip
+        # Main filled rounded rectangle
+        r_corner = 12
+        cv2.rectangle(img, (mx + r_corner, my), (mx + patch_w - r_corner, my + patch_h), reagent_bgr, -1)
+        cv2.rectangle(img, (mx, my + r_corner), (mx + patch_w, my + patch_h - r_corner), reagent_bgr, -1)
+        cv2.circle(img, (mx + r_corner, my + r_corner), r_corner, reagent_bgr, -1)
+        cv2.circle(img, (mx + patch_w - r_corner, my + r_corner), r_corner, reagent_bgr, -1)
+        cv2.circle(img, (mx + r_corner, my + patch_h - r_corner), r_corner, reagent_bgr, -1)
+        cv2.circle(img, (mx + patch_w - r_corner, my + patch_h - r_corner), r_corner, reagent_bgr, -1)
+        
+        # Border
+        cv2.rectangle(img, (mx, my), (mx + patch_w, my + patch_h), (100, 105, 110), 1)
+        
+        # Subtle holder clips on left/right ends of the 8x4mm strip
+        cv2.rectangle(img, (mx - 4, my + 30), (mx + 8, my + patch_h - 30), (160, 165, 170), -1)
+        cv2.rectangle(img, (mx + patch_w - 8, my + 30), (mx + patch_w + 4, my + patch_h - 30), (160, 165, 170), -1)
     else:
         # Empty missing strip well
         cv2.putText(img, "[EMPTY REACTION WELL - NO STRIP]", (strip_x + 30, strip_y + 90),
@@ -269,8 +279,17 @@ def generate_standard_demo_suite(output_dir: str = "data/demo"):
             "badge_id": "MRPL-H2S-8821",
             "expiry": "VALID",
             "lighting": 1.0,
-            "title": "Moderate (742 ppm·min)",
-            "description": "Elevated exposure (300 - 1000 ppm·min). Requires shift review."
+            "title": "Test Strip A (742 ppm·min)",
+            "description": "Software validation image A: Moderate benchmark exposure."
+        },
+        {
+            "filename": "badge_validation_900ppm.png",
+            "dose": 900.0,
+            "badge_id": "MRPL-H2S-9042",
+            "expiry": "VALID",
+            "lighting": 1.0,
+            "title": "Test Strip B (900 ppm·min)",
+            "description": "Software validation image B: High-moderate benchmark exposure."
         },
         {
             "filename": "badge_high_1850ppm.png",

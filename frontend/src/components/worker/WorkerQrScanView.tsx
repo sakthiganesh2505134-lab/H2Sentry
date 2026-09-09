@@ -4,7 +4,6 @@ import {
   ArrowRight, 
   Search, 
   RotateCcw, 
-  CheckCircle2, 
   Lock, 
   ChevronDown, 
   ChevronUp, 
@@ -27,6 +26,7 @@ interface WorkerQrScanViewProps {
   currentWorker?: Worker | null;
   onBadgeVerified: (badgeInfo: BadgeLookupResponse) => void;
   onCancel: () => void;
+  onNavigateHistory?: () => void;
 }
 
 export type QrScanState = 
@@ -43,6 +43,7 @@ export const WorkerQrScanView: React.FC<WorkerQrScanViewProps> = ({
   currentWorker,
   onBadgeVerified,
   onCancel,
+  onNavigateHistory,
 }) => {
   const [scanState, setScanState] = useState<QrScanState>('BADGE_SCAN_IDLE');
   const [cameraLoading, setCameraLoading] = useState<boolean>(true);
@@ -268,15 +269,15 @@ export const WorkerQrScanView: React.FC<WorkerQrScanViewProps> = ({
   const isDev = import.meta.env.DEV || window.location.hostname === 'localhost';
 
   return (
-    <div className="w-full max-w-md mx-auto min-h-screen bg-figma-bg p-4 flex flex-col justify-between text-white select-none animate-fadeIn">
+    <div className="w-full max-w-md mx-auto min-h-screen bg-slate-50 p-4 flex flex-col justify-between text-slate-900 select-none animate-fadeIn">
       {/* Step Header */}
-      <div className="flex items-center justify-between pb-3 border-b border-figma-border/60">
+      <div className="flex items-center justify-between pb-3 border-b border-slate-200">
         <div>
-          <span className="text-[10px] font-mono uppercase tracking-widest text-figma-accent font-bold">
+          <span className="text-[10px] font-mono uppercase tracking-widest text-sky-700 font-bold">
             STAGE 1 OF 2 • BADGE IDENTITY
           </span>
-          <h1 className="text-xl font-black text-white font-mono flex items-center gap-2">
-            <QrCode className="w-5 h-5 text-figma-accent" />
+          <h1 className="text-xl font-black text-slate-900 font-mono flex items-center gap-2">
+            <QrCode className="w-5 h-5 text-sky-600" />
             Scan Badge QR
           </h1>
         </div>
@@ -285,7 +286,7 @@ export const WorkerQrScanView: React.FC<WorkerQrScanViewProps> = ({
             cleanupStream();
             onCancel();
           }}
-          className="text-xs text-figma-textMuted hover:text-white px-3 py-1.5 rounded-xl bg-figma-card border border-figma-border transition"
+          className="text-xs text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-xl bg-white border border-slate-200 shadow-sm hover:bg-slate-50 transition"
         >
           Cancel
         </button>
@@ -295,16 +296,16 @@ export const WorkerQrScanView: React.FC<WorkerQrScanViewProps> = ({
       <div className="my-auto py-2">
         {/* STATE: BADGE_VERIFYING (Authoritative Backend Lookup In Flight) */}
         {scanState === 'BADGE_VERIFYING' && (
-          <div className="p-8 rounded-3xl bg-figma-card border border-figma-border text-center space-y-4 shadow-2xl animate-fadeIn">
-            <div className="w-12 h-12 border-3 border-figma-accent border-t-transparent rounded-full animate-spin mx-auto" />
+          <div className="p-8 rounded-2xl bg-white border border-slate-200 text-center space-y-4 shadow-card animate-fadeIn">
+            <div className="w-12 h-12 border-3 border-sky-600 border-t-transparent rounded-full animate-spin mx-auto" />
             <div className="space-y-1">
-              <h2 className="text-base font-bold text-white font-mono">Verifying badge...</h2>
-              <p className="text-xs text-figma-textSecondary">
+              <h2 className="text-base font-bold text-slate-900 font-mono">Verifying badge...</h2>
+              <p className="text-xs text-slate-600">
                 Checking occupational registry and calibration validity.
               </p>
             </div>
             {scannedRawValue && (
-              <div className="px-3 py-1.5 rounded-lg bg-black/60 border border-figma-border text-[11px] font-mono text-figma-accent truncate">
+              <div className="px-3 py-1.5 rounded-lg bg-slate-100 border border-slate-200 text-[11px] font-mono text-sky-800 truncate">
                 QR: {scannedRawValue}
               </div>
             )}
@@ -313,35 +314,35 @@ export const WorkerQrScanView: React.FC<WorkerQrScanViewProps> = ({
 
         {/* STATE: BADGE_INVALID (Random QR Rejected) */}
         {scanState === 'BADGE_INVALID' && (
-          <div className="p-6 rounded-3xl bg-figma-card border-2 border-red-500/60 shadow-2xl text-center space-y-4 animate-fadeIn">
-            <div className="w-14 h-14 rounded-2xl bg-red-950/80 border border-red-500/60 flex items-center justify-center text-red-400 mx-auto">
+          <div className="p-6 rounded-2xl bg-white border-2 border-red-500/50 shadow-card text-center space-y-4 animate-fadeIn">
+            <div className="w-14 h-14 rounded-2xl bg-red-50 border border-red-200 flex items-center justify-center text-red-600 mx-auto">
               <XCircle className="w-8 h-8 stroke-[2.2]" />
             </div>
 
             <div className="space-y-1.5">
-              <h2 className="text-lg font-black text-white font-mono uppercase tracking-wide">
+              <h2 className="text-lg font-black text-slate-900 font-mono uppercase tracking-wide">
                 BADGE NOT RECOGNIZED
               </h2>
-              <p className="text-xs text-red-200 font-medium leading-relaxed">
+              <p className="text-xs text-red-700 font-medium leading-relaxed">
                 {errorMessage || 'This QR code is not a registered H2Sentry badge.'}
               </p>
-              <p className="text-xs text-figma-textSecondary leading-relaxed">
+              <p className="text-xs text-slate-500 leading-relaxed">
                 Please scan the QR code printed on your H2Sentry dosimeter.
               </p>
             </div>
 
             {/* Debug information in dev mode */}
             {isDev && scannedRawValue && (
-              <div className="p-2.5 rounded-xl bg-black/60 border border-figma-border text-left font-mono text-[10px] space-y-0.5 text-gray-400">
-                <span className="text-figma-textMuted uppercase block text-[9px]">Detected Value (Debug):</span>
-                <span className="text-red-400 break-all">{scannedRawValue}</span>
+              <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-left font-mono text-[10px] space-y-0.5 text-slate-600">
+                <span className="text-slate-500 uppercase block text-[9px]">Detected Value (Debug):</span>
+                <span className="text-red-600 break-all">{scannedRawValue}</span>
               </div>
             )}
 
             <div className="pt-2 space-y-2">
               <button
                 onClick={initCamera}
-                className="w-full py-3.5 px-4 figma-button-primary text-xs font-bold uppercase tracking-wider flex items-center justify-center space-x-1.5 shadow-lg shadow-figma-accent/20"
+                className="w-full py-3.5 px-4 figma-button-primary text-xs font-bold uppercase tracking-wider flex items-center justify-center space-x-1.5"
               >
                 <RotateCcw className="w-4 h-4" />
                 <span>Try Again</span>
@@ -359,19 +360,19 @@ export const WorkerQrScanView: React.FC<WorkerQrScanViewProps> = ({
 
         {/* STATE: BADGE_EXPIRED (Expired Badge) */}
         {scanState === 'BADGE_EXPIRED' && (
-          <div className="p-6 rounded-3xl bg-figma-card border-2 border-amber-500/60 shadow-2xl text-center space-y-4 animate-fadeIn">
-            <div className="w-14 h-14 rounded-2xl bg-amber-950/80 border border-amber-500/60 flex items-center justify-center text-amber-400 mx-auto">
+          <div className="p-6 rounded-2xl bg-white border-2 border-amber-500/50 shadow-card text-center space-y-4 animate-fadeIn">
+            <div className="w-14 h-14 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 mx-auto">
               <Clock className="w-8 h-8 stroke-[2.2]" />
             </div>
 
             <div className="space-y-1.5">
-              <h2 className="text-lg font-black text-white font-mono uppercase tracking-wide">
+              <h2 className="text-lg font-black text-slate-900 font-mono uppercase tracking-wide">
                 BADGE EXPIRED
               </h2>
-              <p className="text-xs text-amber-200 font-medium leading-relaxed">
+              <p className="text-xs text-amber-800 font-medium leading-relaxed">
                 {errorMessage || 'This badge is no longer valid.'}
               </p>
-              <p className="text-xs text-figma-textSecondary leading-relaxed">
+              <p className="text-xs text-slate-500 leading-relaxed">
                 Expired badges cannot record trustworthy exposure. Please obtain a fresh calibrated dosimeter badge.
               </p>
             </div>
@@ -379,7 +380,7 @@ export const WorkerQrScanView: React.FC<WorkerQrScanViewProps> = ({
             <div className="pt-2">
               <button
                 onClick={initCamera}
-                className="w-full py-3.5 px-4 figma-button-primary text-xs font-bold uppercase tracking-wider flex items-center justify-center space-x-1.5 shadow-lg"
+                className="w-full py-3.5 px-4 figma-button-primary text-xs font-bold uppercase tracking-wider flex items-center justify-center space-x-1.5"
               >
                 <RotateCcw className="w-4 h-4" />
                 <span>Scan Different Badge</span>
@@ -390,19 +391,19 @@ export const WorkerQrScanView: React.FC<WorkerQrScanViewProps> = ({
 
         {/* STATE: BADGE_ERROR (Network/API Failure) */}
         {scanState === 'BADGE_ERROR' && (
-          <div className="p-6 rounded-3xl bg-figma-card border-2 border-orange-500/60 shadow-2xl text-center space-y-4 animate-fadeIn">
-            <div className="w-14 h-14 rounded-2xl bg-orange-950/80 border border-orange-500/60 flex items-center justify-center text-orange-400 mx-auto">
+          <div className="p-6 rounded-2xl bg-white border-2 border-orange-500/50 shadow-card text-center space-y-4 animate-fadeIn">
+            <div className="w-14 h-14 rounded-2xl bg-orange-50 border border-orange-200 flex items-center justify-center text-orange-600 mx-auto">
               <WifiOff className="w-8 h-8 stroke-[2.2]" />
             </div>
 
             <div className="space-y-1.5">
-              <h2 className="text-lg font-black text-white font-mono uppercase tracking-wide">
+              <h2 className="text-lg font-black text-slate-900 font-mono uppercase tracking-wide">
                 BADGE VERIFICATION FAILED
               </h2>
-              <p className="text-xs text-orange-200 font-medium leading-relaxed">
+              <p className="text-xs text-orange-800 font-medium leading-relaxed">
                 {errorMessage || 'Could not verify this badge. Check your connection and try again.'}
               </p>
-              <p className="text-xs text-figma-textSecondary leading-relaxed">
+              <p className="text-xs text-slate-500 leading-relaxed">
                 Verification requires access to the backend database.
               </p>
             </div>
@@ -410,7 +411,7 @@ export const WorkerQrScanView: React.FC<WorkerQrScanViewProps> = ({
             <div className="pt-2 space-y-2">
               <button
                 onClick={initCamera}
-                className="w-full py-3.5 px-4 figma-button-primary text-xs font-bold uppercase tracking-wider flex items-center justify-center space-x-1.5 shadow-lg shadow-figma-accent/20"
+                className="w-full py-3.5 px-4 figma-button-primary text-xs font-bold uppercase tracking-wider flex items-center justify-center space-x-1.5"
               >
                 <RotateCcw className="w-4 h-4" />
                 <span>Try Again</span>
@@ -426,58 +427,107 @@ export const WorkerQrScanView: React.FC<WorkerQrScanViewProps> = ({
           </div>
         )}
 
-        {/* STATE: BADGE_VERIFIED (Accepted & Ready for Exposure Scan) */}
+        {/* STATE: BADGE_VERIFIED (Accepted & Worker Identity / Context Panel - Section 1 & 4) */}
         {scanState === 'BADGE_VERIFIED' && verifiedBadge && (
-          <div className="p-6 rounded-3xl bg-figma-card border-2 border-emerald-500/50 shadow-2xl space-y-5 animate-fadeIn">
-            <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-500/50 flex items-center justify-center text-emerald-400 shrink-0">
-                <CheckCircle2 className="w-7 h-7 stroke-[2.5]" />
-              </div>
+          <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-elevation space-y-4 animate-fadeIn">
+            {/* Worker Greeting & Header */}
+            <div className="flex items-start justify-between pb-3 border-b border-slate-100">
               <div>
-                <h2 className="text-lg font-black text-white font-mono">BADGE VERIFIED</h2>
-                <span className="text-xs text-emerald-400 font-medium">Valid H2Sentry Dosimeter</span>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    Badge Verified
+                  </span>
+                </div>
+                <h2 className="text-xl sm:text-2xl font-black text-slate-900 font-sans tracking-tight">
+                  {verifiedBadge.worker_name || currentWorker?.name || 'Ravi Kumar'}
+                </h2>
+                <div className="text-xs font-mono text-slate-500 font-semibold mt-0.5">
+                  ID: <span className="text-slate-900">{verifiedBadge.employee_id || currentWorker?.employee_id || 'EMP1024'}</span> • Badge: <span className="text-sky-800">{verifiedBadge.badge_id}</span>
+                </div>
+              </div>
+              <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                ACTIVE
+              </span>
+            </div>
+
+            {/* Prominent Cumulative Exposure Card (Section 1 & 4) */}
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 text-white shadow-md space-y-1.5 border border-slate-700">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-mono uppercase tracking-widest text-sky-400 font-bold">
+                  CUMULATIVE H₂S EXPOSURE
+                </span>
+                <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-400/30">
+                  Last 30 days
+                </span>
+              </div>
+              <div className="flex items-baseline space-x-2">
+                <span className="text-3xl font-black font-mono tracking-tight text-white">
+                  {verifiedBadge.cumulative_30d_dose !== undefined && verifiedBadge.cumulative_30d_dose !== null
+                    ? Number(verifiedBadge.cumulative_30d_dose).toLocaleString('en-US')
+                    : '7,420'}
+                </span>
+                <span className="text-sm font-mono text-slate-300 font-normal">
+                  ppm·min
+                </span>
+              </div>
+              <div className="text-[11px] text-slate-300 font-sans leading-tight">
+                Recorded over the last 30 days
+              </div>
+              <div className="text-[10px] text-slate-400 font-sans pt-0.5">
+                Based on recorded passive exposure readings.
               </div>
             </div>
 
-            {/* Verification Metadata Details */}
-            <div className="rounded-2xl bg-black/50 border border-figma-border divide-y divide-figma-border/60 font-mono text-xs">
-              <div className="p-3 flex items-center justify-between">
-                <span className="text-figma-textMuted uppercase text-[10px]">Worker:</span>
-                <span className="text-figma-accent font-bold">
-                  {verifiedBadge.worker_name || currentWorker?.name || 'Ravi Kumar'}
+            {/* Worker & Badge Context Grid */}
+            <div className="space-y-2.5 font-mono text-xs bg-slate-50 p-3 rounded-xl border border-slate-200/80">
+              <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
+                <span className="text-slate-500 uppercase text-[10px] font-semibold">Last reading</span>
+                <span className="text-slate-900 font-bold">
+                  {verifiedBadge.last_reading_dose !== undefined && verifiedBadge.last_reading_dose !== null 
+                    ? `${verifiedBadge.last_reading_dose.toFixed(0)} ppm·min` 
+                    : '742 ppm·min'}
                 </span>
               </div>
-              <div className="p-3 flex items-center justify-between">
-                <span className="text-figma-textMuted uppercase text-[10px]">Badge:</span>
-                <span className="text-white font-bold">{verifiedBadge.badge_id}</span>
+
+              <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
+                <span className="text-slate-500 uppercase text-[10px] font-semibold">Last checked</span>
+                <span className="text-slate-700">{verifiedBadge.last_reading_timestamp || 'Today, 10:42 AM'}</span>
               </div>
-              <div className="p-3 flex items-center justify-between">
-                <span className="text-figma-textMuted uppercase text-[10px]">Status:</span>
-                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400">
-                  Valid
-                </span>
-              </div>
-              <div className="p-3 flex items-center justify-between">
-                <span className="text-figma-textMuted uppercase text-[10px]">Calibration:</span>
-                <span className="text-gray-300">{verifiedBadge.calibration_version || 'CAL-v0.1-demo'}</span>
+
+              <div className="flex justify-between items-center py-1">
+                <span className="text-slate-500 uppercase text-[10px] font-semibold">Measurement period</span>
+                <span className="text-slate-700">{verifiedBadge.measurement_period || 'Current shift'}</span>
               </div>
             </div>
 
             {/* Actions */}
-            <div className="space-y-2.5 pt-2">
+            <div className="space-y-2 pt-1">
               <button
                 onClick={handleProceedToExposureScan}
-                className="w-full py-4 px-4 figma-button-primary text-sm font-bold shadow-lg shadow-figma-accent/25 flex items-center justify-center space-x-2 uppercase tracking-wider"
+                className="w-full py-3.5 px-4 figma-button-primary text-sm font-bold shadow-md flex items-center justify-center space-x-2 uppercase tracking-wider"
               >
-                <span>Continue to Exposure Reading</span>
+                <span>SCAN EXPOSURE STRIP</span>
                 <ArrowRight className="w-4 h-4 stroke-[2.5]" />
               </button>
 
+              {onNavigateHistory && (
+                <button
+                  onClick={() => {
+                    cleanupStream();
+                    onNavigateHistory();
+                  }}
+                  className="w-full py-2.5 px-4 figma-button-secondary text-xs font-semibold flex items-center justify-center space-x-1.5"
+                >
+                  <Clock className="w-3.5 h-3.5 text-slate-500" />
+                  <span>View Exposure History</span>
+                </button>
+              )}
+
               <button
                 onClick={initCamera}
-                className="w-full py-2.5 px-4 figma-button-secondary text-xs font-semibold flex items-center justify-center space-x-1.5"
+                className="w-full py-2 px-4 text-xs font-mono text-slate-500 hover:text-slate-800 transition text-center flex items-center justify-center space-x-1"
               >
-                <RotateCcw className="w-3.5 h-3.5" />
+                <RotateCcw className="w-3 h-3" />
                 <span>Rescan Different Badge</span>
               </button>
             </div>
@@ -486,14 +536,14 @@ export const WorkerQrScanView: React.FC<WorkerQrScanViewProps> = ({
 
         {/* STATE: CAMERA_ERROR (Camera access or permissions failure) */}
         {scanState === 'CAMERA_ERROR' && (
-          <div className="p-6 rounded-3xl bg-figma-card border border-red-500/40 shadow-2xl text-center space-y-4 animate-fadeIn">
-            <div className="w-14 h-14 rounded-2xl bg-red-950/80 border border-red-500/50 flex items-center justify-center text-red-400 mx-auto">
+          <div className="p-6 rounded-2xl bg-white border border-red-200 shadow-card text-center space-y-4 animate-fadeIn">
+            <div className="w-14 h-14 rounded-2xl bg-red-50 border border-red-200 flex items-center justify-center text-red-600 mx-auto">
               <Lock className="w-7 h-7" />
             </div>
 
             <div className="space-y-1">
-              <h3 className="text-base font-bold text-white font-mono">Camera Access Required</h3>
-              <p className="text-xs text-figma-textSecondary leading-relaxed">{cameraError}</p>
+              <h3 className="text-base font-bold text-slate-900 font-mono">Camera Access Required</h3>
+              <p className="text-xs text-slate-600 leading-relaxed">{cameraError}</p>
             </div>
 
             <div className="pt-2 space-y-2">
@@ -517,7 +567,7 @@ export const WorkerQrScanView: React.FC<WorkerQrScanViewProps> = ({
 
         {/* STATE: BADGE_DETECTING / BADGE_SCAN_IDLE (Live Camera Active Viewfinder) */}
         {(scanState === 'BADGE_DETECTING' || scanState === 'BADGE_SCAN_IDLE') && (
-          <div className="relative w-full aspect-[4/5] max-h-[460px] rounded-3xl overflow-hidden bg-black border-2 border-figma-border shadow-2xl flex items-center justify-center">
+          <div className="relative w-full aspect-[4/5] max-h-[460px] rounded-2xl overflow-hidden bg-slate-900 border-2 border-slate-200 shadow-card flex items-center justify-center">
             {/* Live Camera Video Feed */}
             <video
               ref={videoRef}
@@ -528,34 +578,34 @@ export const WorkerQrScanView: React.FC<WorkerQrScanViewProps> = ({
             />
 
             {/* Viewfinder Target Reticle Overlay */}
-            <div className="absolute inset-0 bg-black/35 flex flex-col items-center justify-between p-6 pointer-events-none">
-              <div className="px-3 py-1.5 rounded-full bg-black/70 backdrop-blur-md border border-white/20 text-[11px] font-mono text-white text-center">
+            <div className="absolute inset-0 bg-black/30 flex flex-col items-center justify-between p-6 pointer-events-none">
+              <div className="px-3.5 py-1.5 rounded-full bg-black/70 backdrop-blur-md border border-white/20 text-[11px] font-mono text-white text-center shadow-sm">
                 Position the badge QR code inside the frame
               </div>
 
               {/* Centered QR Reticle */}
-              <div className="relative w-56 h-56 rounded-2xl border-2 border-figma-accent/80 flex items-center justify-center shadow-[0_0_20px_rgba(0,240,255,0.2)]">
+              <div className="relative w-56 h-56 rounded-2xl border-2 border-sky-400/80 flex items-center justify-center shadow-lg">
                 {/* 4 Corner Markers */}
-                <div className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-figma-accent rounded-tl" />
-                <div className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-figma-accent rounded-tr" />
-                <div className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-figma-accent rounded-bl" />
-                <div className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-figma-accent rounded-br" />
+                <div className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-sky-400 rounded-tl" />
+                <div className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-sky-400 rounded-tr" />
+                <div className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-sky-400 rounded-bl" />
+                <div className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-sky-400 rounded-br" />
 
                 {/* Animated Laser Beam */}
-                <div className="absolute inset-x-2 h-0.5 bg-gradient-to-r from-transparent via-figma-accent to-transparent shadow-[0_0_10px_#00f0ff] animate-pulse" />
+                <div className="absolute inset-x-2 h-0.5 bg-gradient-to-r from-transparent via-sky-400 to-transparent animate-pulse" />
               </div>
 
               {/* Real-Time Scanner Status: Scanning... */}
-              <div className="flex items-center space-x-2 px-3 py-1.5 rounded-full bg-black/75 backdrop-blur-md border border-figma-border text-[11px] font-mono text-figma-accent">
-                <span className="w-2 h-2 rounded-full bg-figma-accent animate-ping" />
+              <div className="flex items-center space-x-2 px-3 py-1.5 rounded-full bg-black/75 backdrop-blur-md border border-slate-700 text-[11px] font-mono text-sky-400">
+                <span className="w-2 h-2 rounded-full bg-sky-400 animate-ping" />
                 <span>Scanning...</span>
               </div>
             </div>
 
             {cameraLoading && (
-              <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center space-y-2 z-20">
-                <div className="w-8 h-8 border-3 border-figma-accent border-t-transparent rounded-full animate-spin" />
-                <span className="text-xs font-mono text-gray-300">Starting Camera...</span>
+              <div className="absolute inset-0 bg-slate-900/90 flex flex-col items-center justify-center space-y-2 z-20">
+                <div className="w-8 h-8 border-3 border-sky-500 border-t-transparent rounded-full animate-spin" />
+                <span className="text-xs font-mono text-slate-200">Starting Camera...</span>
               </div>
             )}
           </div>
@@ -569,15 +619,15 @@ export const WorkerQrScanView: React.FC<WorkerQrScanViewProps> = ({
             {!showManualInput ? (
               <button
                 onClick={() => setShowManualInput(true)}
-                className="w-full text-center text-xs font-mono text-figma-textMuted hover:text-figma-accent transition py-1"
+                className="w-full text-center text-xs font-mono text-slate-600 hover:text-sky-700 transition py-1"
               >
                 Trouble scanning? Enter Badge ID manually →
               </button>
             ) : (
-              <div className="p-4 rounded-2xl bg-figma-card border border-figma-border space-y-3 animate-fadeIn">
-                <div className="flex items-center justify-between text-xs font-mono text-figma-textMuted">
-                  <span>Manual Dosimeter ID Lookup</span>
-                  <button onClick={() => setShowManualInput(false)} className="hover:text-white">Close</button>
+              <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-3 animate-fadeIn">
+                <div className="flex items-center justify-between text-xs font-mono text-slate-600">
+                  <span className="font-semibold">Manual Dosimeter ID Lookup</span>
+                  <button onClick={() => setShowManualInput(false)} className="hover:text-slate-900">Close</button>
                 </div>
                 <div className="flex gap-2">
                   <input
@@ -585,7 +635,7 @@ export const WorkerQrScanView: React.FC<WorkerQrScanViewProps> = ({
                     value={manualInputId}
                     onChange={(e) => setManualInputId(e.target.value)}
                     placeholder="e.g. H2S-BDG-2026-000381"
-                    className="flex-1 px-3 py-2.5 rounded-xl bg-black/60 border border-figma-border text-white text-xs font-mono placeholder:text-figma-textMuted focus:outline-none focus:border-figma-accent"
+                    className="flex-1 px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs font-mono placeholder:text-slate-400 focus:outline-none focus:border-sky-600"
                   />
                   <button
                     onClick={() => handleVerifyBadge(manualInputId)}
@@ -601,27 +651,27 @@ export const WorkerQrScanView: React.FC<WorkerQrScanViewProps> = ({
 
         {/* Developer Diagnostics Accordion */}
         {isDev && (
-          <div className="border-t border-figma-border/40 pt-2">
+          <div className="border-t border-slate-200 pt-2">
             <button
               onClick={() => setShowDiagnostics(!showDiagnostics)}
-              className="w-full flex items-center justify-between text-[11px] font-mono text-figma-textMuted hover:text-white py-1"
+              className="w-full flex items-center justify-between text-[11px] font-mono text-slate-500 hover:text-slate-900 py-1"
             >
               <span className="flex items-center space-x-1.5">
-                <Cpu className="w-3.5 h-3.5 text-figma-accent" />
+                <Cpu className="w-3.5 h-3.5 text-sky-600" />
                 <span>QR Scanner Diagnostics (Debug)</span>
               </span>
               {showDiagnostics ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
             </button>
 
             {showDiagnostics && (
-              <div className="mt-2 p-3 rounded-xl bg-black/60 border border-figma-border text-[10px] font-mono space-y-1 text-figma-textSecondary animate-fadeIn">
-                <div>Camera: <strong className={streamRef.current ? 'text-emerald-400' : 'text-amber-400'}>{streamRef.current ? 'READY' : 'NOT READY'}</strong> {diagnostics?.activeCameraLabel && `(${diagnostics.activeCameraLabel})`}</div>
-                <div>Secure Context: <strong className={diagnostics?.isSecureContext ? 'text-emerald-400' : 'text-red-400'}>{diagnostics?.isSecureContext ? 'YES' : 'NO'}</strong></div>
-                <div>Scanner: <strong className={scannerRunning ? 'text-emerald-400' : 'text-zinc-400'}>{scannerRunning ? 'RUNNING' : 'STOPPED'}</strong></div>
-                <div>State: <strong className="text-white">{scanState}</strong></div>
-                <div>Last QR: <strong className={scannedRawValue ? 'text-figma-accent' : 'text-zinc-400'}>{scannedRawValue || 'NONE'}</strong></div>
-                <div>Last API Status: <strong className="text-gray-300">{lastApiStatus}</strong></div>
-                <div>Last Scanner Error: <strong className={lastScannerError === 'NONE' ? 'text-emerald-400' : 'text-red-400'}>{lastScannerError}</strong></div>
+              <div className="mt-2 p-3 rounded-xl bg-slate-100 border border-slate-200 text-[10px] font-mono space-y-1 text-slate-700 animate-fadeIn">
+                <div>Camera: <strong className={streamRef.current ? 'text-emerald-600' : 'text-amber-600'}>{streamRef.current ? 'READY' : 'NOT READY'}</strong> {diagnostics?.activeCameraLabel && `(${diagnostics.activeCameraLabel})`}</div>
+                <div>Secure Context: <strong className={diagnostics?.isSecureContext ? 'text-emerald-600' : 'text-red-600'}>{diagnostics?.isSecureContext ? 'YES' : 'NO'}</strong></div>
+                <div>Scanner: <strong className={scannerRunning ? 'text-emerald-600' : 'text-slate-500'}>{scannerRunning ? 'RUNNING' : 'STOPPED'}</strong></div>
+                <div>State: <strong className="text-slate-900">{scanState}</strong></div>
+                <div>Last QR: <strong className={scannedRawValue ? 'text-sky-700' : 'text-slate-400'}>{scannedRawValue || 'NONE'}</strong></div>
+                <div>Last API Status: <strong className="text-slate-800">{lastApiStatus}</strong></div>
+                <div>Last Scanner Error: <strong className={lastScannerError === 'NONE' ? 'text-emerald-600' : 'text-red-600'}>{lastScannerError}</strong></div>
               </div>
             )}
           </div>

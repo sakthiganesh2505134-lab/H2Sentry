@@ -17,7 +17,6 @@ router = APIRouter()
 
 BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 DEMO_DIR = os.path.join(os.path.dirname(BACKEND_DIR), "data", "demo")
-FIXTURE_PATH = os.path.join(BACKEND_DIR, "tests", "fixtures", "real_strip_reference_fixture.jpg")
 
 class Base64AnalyzeRequest(BaseModel):
     image_base64: Optional[str] = None
@@ -30,29 +29,12 @@ class Base64AnalyzeRequest(BaseModel):
 @router.get("/demo-badges", response_model=List[DemoBadgeItem])
 def get_demo_badges():
     """
-    Returns available deterministic synthetic demo badges and the physical test fixture for 1-click evaluation.
+    Returns available deterministic synthetic software validation badges.
     """
     os.makedirs(DEMO_DIR, exist_ok=True)
     meta = generate_standard_demo_suite(DEMO_DIR)
     
     result = []
-
-    # Include physical test fixture if available
-    if os.path.exists(FIXTURE_PATH):
-        f_img = cv2.imread(FIXTURE_PATH)
-        if f_img is not None:
-            f_b64 = image_to_base64(f_img, quality=80)
-            result.append(DemoBadgeItem(
-                id="real_test_fixture",
-                filename="real_strip_reference_fixture.jpg",
-                title="Physical Strip + Reference Card (Known-Good)",
-                description="Real camera photograph with printed reference scale and used H2S reaction strip in the same frame.",
-                expected_dose=651.3,
-                expiry_status="VALID",
-                badge_id="H2S-BDG-2026-000381",
-                image_url=f_b64
-            ))
-
     for m in meta:
         filepath = m["path"]
         img = cv2.imread(filepath)
@@ -102,20 +84,15 @@ async def analyze_badge_image(
         except Exception:
             raise HTTPException(status_code=400, detail="Invalid base64 image data.")
     elif not image_bytes and demo_preset_id:
-        if demo_preset_id == "real_test_fixture" and os.path.exists(FIXTURE_PATH):
-            with open(FIXTURE_PATH, "rb") as f:
+        filepath = os.path.join(DEMO_DIR, f"{demo_preset_id}.png")
+        if not os.path.exists(filepath):
+            # Regenerate if missing
+            generate_standard_demo_suite(DEMO_DIR)
+        if os.path.exists(filepath):
+            with open(filepath, "rb") as f:
                 image_bytes = f.read()
-        
-        if not image_bytes:
-            filepath = os.path.join(DEMO_DIR, f"{demo_preset_id}.png")
-            if not os.path.exists(filepath):
-                # Regenerate if missing
-                generate_standard_demo_suite(DEMO_DIR)
-            if os.path.exists(filepath):
-                with open(filepath, "rb") as f:
-                    image_bytes = f.read()
-            else:
-                raise HTTPException(status_code=404, detail=f"Demo preset {demo_preset_id} not found.")
+        else:
+            raise HTTPException(status_code=404, detail=f"Demo preset {demo_preset_id} not found.")
                 
     if not image_bytes:
         raise HTTPException(status_code=400, detail="Please provide a badge image file, base64 payload, or demo_preset_id.")
@@ -149,19 +126,14 @@ def analyze_badge_image_json(payload: Base64AnalyzeRequest):
         except Exception:
             raise HTTPException(status_code=400, detail="Invalid base64 image data.")
     elif payload.demo_preset_id:
-        if payload.demo_preset_id == "real_test_fixture" and os.path.exists(FIXTURE_PATH):
-            with open(FIXTURE_PATH, "rb") as f:
+        filepath = os.path.join(DEMO_DIR, f"{payload.demo_preset_id}.png")
+        if not os.path.exists(filepath):
+            generate_standard_demo_suite(DEMO_DIR)
+        if os.path.exists(filepath):
+            with open(filepath, "rb") as f:
                 image_bytes = f.read()
-        
-        if not image_bytes:
-            filepath = os.path.join(DEMO_DIR, f"{payload.demo_preset_id}.png")
-            if not os.path.exists(filepath):
-                generate_standard_demo_suite(DEMO_DIR)
-            if os.path.exists(filepath):
-                with open(filepath, "rb") as f:
-                    image_bytes = f.read()
-            else:
-                raise HTTPException(status_code=404, detail=f"Demo preset {payload.demo_preset_id} not found.")
+        else:
+            raise HTTPException(status_code=404, detail=f"Demo preset {payload.demo_preset_id} not found.")
     else:
         raise HTTPException(status_code=400, detail="Must provide image_base64 or demo_preset_id.")
 

@@ -6,8 +6,8 @@ import {
   Bell, 
   FlaskConical, 
   Settings, 
-  User,
-  LogOut
+  User, 
+  LogOut 
 } from 'lucide-react';
 import type { AuthUser } from '../../types';
 
@@ -46,19 +46,19 @@ export const SupervisorSidebar: React.FC<SupervisorSidebarProps> = ({
   ];
 
   return (
-    <aside className="w-64 bg-figma-surface border-r border-figma-border flex flex-col justify-between shrink-0 h-screen sticky top-0 select-none z-30">
+    <aside className="w-64 bg-white border-r border-slate-200 flex flex-col justify-between shrink-0 h-screen sticky top-0 select-none z-30 shadow-sm">
       {/* Brand Header */}
       <div>
-        <div className="p-5 border-b border-figma-border/60">
+        <div className="p-5 border-b border-slate-200">
           <div className="flex items-center space-x-3 cursor-pointer" onClick={() => setActiveTab('dashboard')}>
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-figma-accent to-blue-600 flex items-center justify-center shadow-lg shadow-figma-accent/15 border border-white/10 shrink-0">
-              <ShieldCheck className="w-5 h-5 text-black stroke-[2.4]" />
+            <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center shadow-md shadow-slate-900/10 border border-slate-800 shrink-0">
+              <ShieldCheck className="w-5 h-5 text-sky-400 stroke-[2.4]" />
             </div>
             <div>
-              <div className="text-base font-black tracking-tight text-white font-mono flex items-center">
-                <span>H<sub className="text-xs font-bold text-figma-accent">2</sub>Sentry</span>
+              <div className="text-base font-black tracking-tight text-slate-900 font-mono flex items-center">
+                <span>H<sub className="text-xs font-bold text-sky-600">2</sub>Sentry</span>
               </div>
-              <div className="text-[10px] font-mono tracking-wider text-figma-accent uppercase font-bold">
+              <div className="text-[10px] font-mono tracking-wider text-slate-500 uppercase font-bold">
                 Supervisor Portal
               </div>
             </div>
@@ -66,7 +66,7 @@ export const SupervisorSidebar: React.FC<SupervisorSidebarProps> = ({
         </div>
 
         {/* Navigation Items */}
-        <nav className="p-3.5 space-y-1.5">
+        <nav className="p-3.5 space-y-1">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
@@ -76,16 +76,16 @@ export const SupervisorSidebar: React.FC<SupervisorSidebarProps> = ({
                 onClick={() => setActiveTab(item.id)}
                 className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                   isActive
-                    ? 'bg-figma-card text-figma-accent border border-figma-accent/40 shadow-sm shadow-figma-accent/10'
-                    : 'text-figma-textSecondary hover:text-white hover:bg-figma-card/60 border border-transparent'
+                    ? 'bg-sky-50 text-sky-700 border border-sky-200 shadow-sm font-bold'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 border border-transparent'
                 }`}
               >
                 <div className="flex items-center space-x-2.5">
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-figma-accent' : 'text-figma-textMuted'}`} />
+                  <Icon className={`w-4 h-4 ${isActive ? 'text-sky-600' : 'text-slate-400'}`} />
                   <span className="font-sans">{item.label}</span>
                 </div>
                 {item.badge ? (
-                  <span className="px-1.5 py-0.5 rounded-full text-[9px] font-mono font-bold bg-figma-danger text-white">
+                  <span className="px-1.5 py-0.5 rounded-full text-[9px] font-mono font-bold bg-amber-500 text-white shadow-sm">
                     {item.badge}
                   </span>
                 ) : null}
@@ -96,17 +96,17 @@ export const SupervisorSidebar: React.FC<SupervisorSidebarProps> = ({
       </div>
 
       {/* Authenticated Supervisor Profile Card & Sign Out */}
-      <div className="p-4 space-y-3 border-t border-figma-border/60">
+      <div className="p-4 space-y-3 border-t border-slate-200 bg-slate-50/50">
         {/* Supervisor User Details */}
-        <div className="p-3 rounded-xl bg-figma-card border border-figma-border/70 flex items-center space-x-3">
-          <div className="w-9 h-9 rounded-full bg-figma-surface border border-figma-border flex items-center justify-center text-figma-textMuted shrink-0">
-            <User className="w-4 h-4 text-figma-accent" />
+        <div className="p-3 rounded-xl bg-white border border-slate-200 shadow-xs flex items-center space-x-3">
+          <div className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-500 shrink-0">
+            <User className="w-4 h-4 text-sky-600" />
           </div>
           <div className="overflow-hidden flex-1">
-            <div className="text-xs font-bold text-white font-sans truncate">
+            <div className="text-xs font-bold text-slate-900 font-sans truncate">
               {supervisorName}
             </div>
-            <div className="text-[10px] font-mono text-figma-textMuted truncate">
+            <div className="text-[10px] font-mono text-slate-500 truncate">
               {employeeId} • {supervisorRole}
             </div>
           </div>
@@ -115,12 +115,13 @@ export const SupervisorSidebar: React.FC<SupervisorSidebarProps> = ({
         {/* Sign Out Action */}
         <button
           onClick={onSignOut}
-          className="w-full py-2 px-3 rounded-xl bg-red-950/40 hover:bg-red-950/70 border border-red-500/30 text-xs font-mono text-red-300 hover:text-white transition-all flex items-center justify-center space-x-2"
+          className="w-full py-2 px-3 rounded-xl bg-white hover:bg-red-50 border border-slate-200 hover:border-red-200 text-xs font-mono text-slate-700 hover:text-red-700 transition-all flex items-center justify-center space-x-2 shadow-xs"
         >
-          <LogOut className="w-3.5 h-3.5" />
+          <LogOut className="w-3.5 h-3.5 text-red-500" />
           <span>Sign Out</span>
         </button>
       </div>
     </aside>
   );
 };
+

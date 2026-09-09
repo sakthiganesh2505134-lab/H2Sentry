@@ -60,6 +60,7 @@ export function App() {
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [readings, setReadings] = useState<Reading[]>([]);
   const [dataLoading, setDataLoading] = useState<boolean>(true);
+  const [dataError, setDataError] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
 
   // Selected Entities
@@ -130,48 +131,57 @@ export function App() {
 
   // 2. Load Core Application Data
   const loadAllInitialData = useCallback(async () => {
+    console.log('[HOME] latest exposure request started');
     setDataLoading(true);
+    setDataError(null);
     try {
       const [s, b, w, r] = await Promise.all([
         fetchDashboardStats().catch(() => null),
         fetchDemoBadges().catch(() => []),
-        fetchWorkers().catch(() => []),
-        fetchReadings({ limit: 50 }).catch(() => []),
+        fetchWorkers().catch((err) => {
+          console.error('Fetch workers error', err);
+          return [];
+        }),
+        fetchReadings({ limit: 50 }).catch((err) => {
+          console.error('Fetch readings error', err);
+          return [];
+        }),
       ]);
+      console.log('[HOME] latest exposure response received', { workersCount: w?.length, readingsCount: r?.length });
       setDashboardStats(s);
       setDemoBadges(b);
-      setWorkers(w);
-      setReadings(r);
+      setWorkers(w || []);
+      setReadings(r || []);
       
-      // Match active worker with logged in user if applicable
-      if (currentUser?.worker_id) {
-        const match = w.find(item => item.id === currentUser.worker_id);
-        if (match) setCurrentWorker(match);
-      } else if (w.length > 0 && !currentWorker) {
-        setCurrentWorker(w[0]);
-      }
-    } catch (err) {
-      console.error('Initial data load error', err);
+      // Match active worker using functional update to avoid dependency loop
+      setCurrentWorker((prevWorker) => {
+        if (currentUser?.worker_id) {
+          const match = (w || []).find(item => item.id === currentUser.worker_id);
+          if (match) return match;
+        }
+        if (currentUser?.employee_id) {
+          const match = (w || []).find(item => item.employee_id === currentUser.employee_id);
+          if (match) return match;
+        }
+        if (prevWorker) {
+          const matched = (w || []).find(item => item.id === prevWorker.id);
+          if (matched) return matched;
+        }
+        return (w && w.length > 0) ? w[0] : null;
+      });
+      console.log('[HOME] latest exposure parsed');
+    } catch (err: any) {
+      console.error('[HOME] latest exposure request failed', err);
+      setDataError(err.message || 'Unable to connect to service');
     } finally {
       setDataLoading(false);
+      console.log('[HOME] latest exposure loading complete');
     }
-  }, [currentUser, currentWorker]);
+  }, [currentUser?.id, currentUser?.worker_id, currentUser?.employee_id]);
 
   useEffect(() => {
     loadAllInitialData();
   }, [loadAllInitialData]);
-
-  // Sync currentWorker whenever workers list or currentUser changes
-  useEffect(() => {
-    if (currentUser && workers.length > 0) {
-      const match = workers.find(
-        w => w.employee_id === currentUser.employee_id || w.id === currentUser.worker_id
-      );
-      if (match) {
-        setCurrentWorker(match);
-      }
-    }
-  }, [currentUser, workers]);
 
   // 3. User Login Handler
   const handleLogin = async (credentials: LoginCredentials) => {
@@ -212,6 +222,8 @@ export function App() {
 
   // 5. Data Refresh & Management
   const handleRefreshData = async () => {
+    setDataLoading(true);
+    setDataError(null);
     try {
       const [s, w, r] = await Promise.all([
         fetchDashboardStats().catch(() => null),
@@ -219,14 +231,28 @@ export function App() {
         fetchReadings({ limit: 50 }).catch(() => []),
       ]);
       setDashboardStats(s);
-      setWorkers(w);
-      setReadings(r);
-      if (currentUser?.worker_id) {
-        const match = w.find(item => item.id === currentUser.worker_id);
-        if (match) setCurrentWorker(match);
-      }
-    } catch (err) {
+      setWorkers(w || []);
+      setReadings(r || []);
+      setCurrentWorker((prevWorker) => {
+        if (currentUser?.worker_id) {
+          const match = (w || []).find(item => item.id === currentUser.worker_id);
+          if (match) return match;
+        }
+        if (currentUser?.employee_id) {
+          const match = (w || []).find(item => item.employee_id === currentUser.employee_id);
+          if (match) return match;
+        }
+        if (prevWorker) {
+          const match = (w || []).find(item => item.id === prevWorker.id);
+          if (match) return match;
+        }
+        return (w && w.length > 0) ? w[0] : null;
+      });
+    } catch (err: any) {
       console.error('Failed to refresh data', err);
+      setDataError(err.message || 'Failed to refresh telemetry');
+    } finally {
+      setDataLoading(false);
     }
   };
 
@@ -267,11 +293,11 @@ export function App() {
   };
 
   return (
-    <div className="min-h-screen bg-figma-bg text-figma-textPrimary font-sans selection:bg-figma-accent selection:text-black flex flex-col">
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-sky-100 selection:text-sky-900 flex flex-col">
       {/* Toast Notification Banner */}
       {actionMessage && (
-        <div className="fixed top-3 left-1/2 -translate-x-1/2 z-50 bg-cyan-950/95 border border-figma-accent/60 text-figma-accent px-4 py-2 rounded-xl text-xs font-mono flex items-center gap-2 shadow-2xl animate-fadeIn">
-          <CheckCircle2 className="w-4 h-4 text-figma-accent shrink-0" />
+        <div className="fixed top-3 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white px-4 py-2.5 rounded-xl text-xs font-mono flex items-center gap-2 shadow-xl animate-fadeIn border border-slate-800">
+          <CheckCircle2 className="w-4 h-4 text-sky-400 shrink-0" />
           <span>{actionMessage}</span>
         </div>
       )}
@@ -295,7 +321,7 @@ export function App() {
       {viewMode === 'about' && (
         <div className="w-full flex-1 flex flex-col">
           {/* Top Return Header */}
-          <div className="w-full bg-figma-surface border-b border-figma-border px-4 py-3 flex items-center justify-between">
+          <div className="w-full bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between shadow-xs">
             <button
               onClick={() => {
                 if (currentUser) {
@@ -304,12 +330,12 @@ export function App() {
                   setViewMode('login');
                 }
               }}
-              className="flex items-center space-x-2 text-xs font-mono text-figma-accent hover:text-white transition"
+              className="flex items-center space-x-2 text-xs font-mono text-sky-700 hover:text-sky-900 transition font-bold"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>Back to {currentUser ? 'Application' : 'Sign In'}</span>
             </button>
-            <div className="text-xs font-mono text-figma-textMuted">
+            <div className="text-xs font-mono text-slate-500">
               H2Sentry Documentation & Science
             </div>
           </div>
@@ -334,7 +360,7 @@ export function App() {
 
       {/* WORKER APPLICATION (Mobile-First, Real Viewport, No Fake Phone Bezel) */}
       {viewMode === 'worker' && (
-        <div className="w-full min-h-screen flex flex-col bg-figma-bg">
+        <div className="w-full min-h-screen flex flex-col bg-slate-50">
           <WorkerLayout
             workers={workers}
             currentWorker={currentWorker}
@@ -345,29 +371,32 @@ export function App() {
             onReadingSaved={handleRefreshData}
             onSignOut={handleLogout}
             initialPresetScenario={activePresetScenario}
+            dataLoading={dataLoading}
+            dataError={dataError}
+            onRefreshData={handleRefreshData}
           />
         </div>
       )}
 
       {/* SUPERVISOR DASHBOARD (Responsive Desktop Operations Command Center) */}
       {viewMode === 'supervisor' && (
-        <div className="min-h-screen flex flex-col bg-figma-bg">
+        <div className="min-h-screen flex flex-col bg-slate-50">
           {/* Top Supervisor Mobile App Bar */}
-          <header className="lg:hidden sticky top-0 z-40 bg-figma-surface/95 backdrop-blur-md border-b border-figma-border px-4 py-3 flex items-center justify-between">
+          <header className="lg:hidden sticky top-0 z-40 bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between shadow-xs">
             <div className="flex items-center space-x-2.5">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-figma-accent to-blue-600 flex items-center justify-center">
-                <ShieldCheck className="w-4.5 h-4.5 text-black stroke-[2.5]" />
+              <div className="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center">
+                <ShieldCheck className="w-4.5 h-4.5 text-sky-400 stroke-[2.5]" />
               </div>
               <div>
-                <span className="font-bold text-white font-mono text-sm">H2Sentry</span>
-                <span className="text-[10px] text-figma-accent font-mono block">Supervisor</span>
+                <span className="font-bold text-slate-900 font-mono text-sm">H2Sentry</span>
+                <span className="text-[10px] text-slate-500 font-mono block">Supervisor</span>
               </div>
             </div>
 
             <div className="flex items-center space-x-2">
               <button
                 onClick={() => setMobileSupervisorMenuOpen(!mobileSupervisorMenuOpen)}
-                className="p-2 rounded-lg bg-figma-card border border-figma-border text-white"
+                className="p-2 rounded-lg bg-slate-100 border border-slate-200 text-slate-700 hover:text-slate-900"
               >
                 {mobileSupervisorMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </button>
@@ -391,13 +420,13 @@ export function App() {
 
             {/* Mobile Navigation Drawer */}
             {mobileSupervisorMenuOpen && (
-              <div className="lg:hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm p-4 flex flex-col justify-between">
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between pb-3 border-b border-figma-border">
-                    <span className="text-sm font-bold text-white font-mono">Navigation Menu</span>
+              <div className="lg:hidden fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs p-4 flex flex-col justify-between">
+                <div className="space-y-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-xl">
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+                    <span className="text-sm font-bold text-slate-900 font-mono">Navigation Menu</span>
                     <button
                       onClick={() => setMobileSupervisorMenuOpen(false)}
-                      className="p-1 text-figma-textMuted hover:text-white"
+                      className="p-1 text-slate-400 hover:text-slate-700"
                     >
                       <X className="w-5 h-5" />
                     </button>
@@ -418,23 +447,23 @@ export function App() {
                           setMobileSupervisorMenuOpen(false);
                         }}
                         className={`p-3 rounded-xl text-left text-xs font-semibold ${
-                          supervisorTab === tab.id ? 'bg-figma-card text-figma-accent border border-figma-accent' : 'text-gray-300'
+                          supervisorTab === tab.id ? 'bg-sky-50 text-sky-700 border border-sky-300 font-bold' : 'text-slate-700 hover:bg-slate-50'
                         }`}
                       >
                         {tab.label}
                       </button>
                     ))}
                   </div>
-                </div>
 
-                <div className="pt-4 border-t border-figma-border">
-                  <button
-                    onClick={handleLogout}
-                    className="w-full py-3 rounded-xl bg-red-950 text-red-300 border border-red-500/40 text-xs font-bold flex items-center justify-center space-x-2"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    <span>Sign Out</span>
-                  </button>
+                  <div className="pt-3 border-t border-slate-200">
+                    <button
+                      onClick={handleLogout}
+                      className="w-full py-2.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-xs font-bold flex items-center justify-center space-x-2"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      <span>Sign Out</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -442,16 +471,16 @@ export function App() {
             {/* Main Supervisor Content Area */}
             <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 overflow-y-auto">
               {/* Secondary Header Toolbar */}
-              <div className="flex flex-wrap items-center justify-between gap-3 mb-6 pb-4 border-b border-figma-border/60">
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-6 pb-4 border-b border-slate-200">
                 <div>
-                  <h1 className="text-xl sm:text-2xl font-black text-white font-mono tracking-tight">
+                  <h1 className="text-xl sm:text-2xl font-black text-slate-900 font-mono tracking-tight">
                     {supervisorTab === 'dashboard' && 'Occupational Exposure Operations'}
                     {supervisorTab === 'team' && 'Workforce Exposure Dossiers'}
                     {supervisorTab === 'alerts' && 'Safety Attention & Review Register'}
                     {supervisorTab === 'calibration' && 'Gas Chamber Calibration Benchmark'}
                     {supervisorTab === 'settings' && 'Refinery Safety Thresholds'}
                   </h1>
-                  <p className="text-xs text-figma-textMuted mt-0.5">
+                  <p className="text-xs text-slate-500 mt-0.5">
                     Mangalore Refinery and Petrochemicals Limited (MRPL) • Unit Dosimetry Command
                   </p>
                 </div>
@@ -460,18 +489,18 @@ export function App() {
                   <button
                     onClick={handleResetDatabase}
                     title="Reset Database to 0-worker state"
-                    className="px-2.5 py-1.5 rounded-lg text-xs font-mono text-gray-400 hover:text-red-400 bg-figma-card hover:bg-red-950/30 border border-figma-border hover:border-red-800/40 transition flex items-center gap-1.5"
+                    className="px-3 py-1.5 rounded-lg text-xs font-mono text-slate-600 hover:text-red-700 bg-white hover:bg-red-50 border border-slate-200 hover:border-red-300 transition flex items-center gap-1.5 shadow-xs"
                   >
-                    <RotateCcw className="w-3.5 h-3.5" />
+                    <RotateCcw className="w-3.5 h-3.5 text-slate-400 group-hover:text-red-500" />
                     <span className="hidden sm:inline">Clean State (0)</span>
                   </button>
 
                   <button
                     onClick={handleSeedDemoData}
                     title="Seed deterministic benchmark records"
-                    className="px-2.5 py-1.5 rounded-lg text-xs font-mono text-figma-accent bg-figma-card hover:bg-figma-accent/15 border border-figma-border hover:border-figma-accent/40 transition flex items-center gap-1.5"
+                    className="px-3 py-1.5 rounded-lg text-xs font-mono text-sky-700 hover:text-sky-900 bg-white hover:bg-sky-50 border border-slate-200 hover:border-sky-300 transition flex items-center gap-1.5 shadow-xs font-semibold"
                   >
-                    <Database className="w-3.5 h-3.5" />
+                    <Database className="w-3.5 h-3.5 text-sky-600" />
                     <span className="hidden sm:inline">Seed Demo</span>
                   </button>
                 </div>

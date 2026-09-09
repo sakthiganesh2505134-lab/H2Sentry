@@ -69,6 +69,7 @@ export interface ObservedPatch {
 
 export interface ColorCalibrationResult {
   success: boolean;
+  calibration_mode?: string;
   calibration_quality: number;
   residual_error: number;
   channel_gains: {
@@ -77,6 +78,7 @@ export interface ColorCalibrationResult {
     b: number;
   };
   observed_patches: ObservedPatch[];
+  cumulative_scale_swatches?: any[];
   warnings: string[];
 }
 
@@ -230,6 +232,30 @@ export interface DashboardStats {
   };
 }
 
+export interface DailyExposureItem {
+  date: string;
+  day_label: string;
+  exposure_ppm_min: number;
+  readings_count: number;
+}
+
+export interface WorkerSummary {
+  worker_id: string;
+  employee_id: string;
+  worker_name: string;
+  department?: string | null;
+  unit?: string | null;
+  period_days: number;
+  cumulative_exposure_ppm_min: number;
+  reading_count: number;
+  last_reading_ppm_min?: number | null;
+  last_reading_timestamp?: string | null;
+  first_reading_timestamp?: string | null;
+  daily_exposure: DailyExposureItem[];
+  dose_unit: string;
+  scientific_disclosure: string;
+}
+
 export interface Worker {
   id: string;
   employee_id: string;
@@ -242,6 +268,9 @@ export interface Worker {
   badge_status?: 'VALID' | 'EXPIRING_SOON' | 'EXPIRED';
   latest_reading?: Reading | null;
   cumulative_shift_dose?: number;
+  cumulative_30d_dose?: number;
+  cumulative_15d_dose?: number;
+  cumulative_7d_dose?: number;
 }
 
 export interface WorkerCreatePayload {
@@ -296,7 +325,14 @@ export interface BadgeLookupResponse {
   department?: string | null;
   unit?: string | null;
   shift?: string | null;
+  issued_at?: string | null;
   expires_at?: string | null;
+  last_reading_dose?: number | null;
+  last_reading_unit?: string | null;
+  last_reading_timestamp?: string | null;
+  measurement_period?: string | null;
+  cumulative_30d_dose?: number | null;
+  cumulative_30d_unit?: string | null;
   calibration_version: string;
   message?: string | null;
 }
@@ -306,6 +342,10 @@ export interface WorkerDetail {
   badge?: Badge | null;
   readings_history: Reading[];
   total_cumulative_dose: number;
+  period_days?: number;
+  period_cumulative_dose?: number;
+  first_reading_timestamp?: string | null;
+  daily_exposure?: DailyExposureItem[];
   lifetime_scans_count: number;
   exposure_trend: Array<{
     timestamp: string;

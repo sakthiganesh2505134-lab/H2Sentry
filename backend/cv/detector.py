@@ -70,27 +70,26 @@ def score_strip_candidate(
 ) -> Tuple[float, Dict[str, Any]]:
     """
     Scores a candidate contour as a chemical reaction strip.
-    Favors wide horizontal rectangular geometry (aspect ratios 2.5:1 to 12:1).
-    Explicitly penalizes and rejects square / QR-like regions (aspect ~ 1.0)
-    and candidates located inside or above the reference scale area.
+    Favors wide horizontal rectangular geometry (aspect ratios 1.8:1 to 12:1).
+    Explicitly penalizes and rejects square / QR-like regions (aspect ~ 1.0).
     """
-    # Reject candidates that are located inside or above the reference scale
-    if (by + bh * 0.5) < (ref_y_bottom - 10):
-        return 0.0, {"aspect": 0.0, "rectangularity": 0.0, "area_ratio": 0.0, "composite_score": 0.0}
-
     aspect = float(bw) / max(1, bh)
     area = float(bw * bh)
     total_area = float(img_w * img_h)
     area_ratio = area / total_area
 
-    # 1. Aspect Ratio Score: high for 2.5 to 12.0, low for square/QR
+    # Reject candidates located inside physical reference scale if one was detected
+    if ref_y_bottom > 0 and (by + bh * 0.5) < (ref_y_bottom - 10):
+        return 0.0, {"aspect": 0.0, "rectangularity": 0.0, "area_ratio": 0.0, "composite_score": 0.0}
+
+    # 1. Aspect Ratio Score: high for 1.8 to 12.0, very low for square/QR (aspect ~ 1.0)
     if aspect < 1.3:
         # Obvious square QR-like region -> heavy penalty / rejection
         aspect_score = 0.02
-    elif aspect < 2.0:
-        aspect_score = 0.30
-    elif 2.5 <= aspect <= 12.0:
-        aspect_score = min(1.0, 0.80 + 0.20 * min(1.0, (aspect - 2.5) / 4.0))
+    elif aspect < 1.8:
+        aspect_score = 0.35
+    elif 1.8 <= aspect <= 12.0:
+        aspect_score = min(1.0, 0.80 + 0.20 * min(1.0, (aspect - 1.8) / 4.0))
     elif aspect > 12.0:
         aspect_score = max(0.40, 1.0 - (aspect - 12.0) * 0.05)
     else:
@@ -101,19 +100,19 @@ def score_strip_candidate(
     rectangularity = cnt_area / max(1.0, area)
     rect_score = min(1.0, max(0.2, rectangularity))
 
-    # 3. Area Suitability (strip should occupy 2% - 35% of field of view)
-    if 0.015 <= area_ratio <= 0.35:
+    # 3. Area Suitability (strip should occupy 1.5% - 45% of field of view)
+    if 0.015 <= area_ratio <= 0.45:
         area_score = 1.0
     elif area_ratio < 0.015:
         area_score = max(0.1, area_ratio / 0.015)
     else:
-        area_score = max(0.3, 1.0 - (area_ratio - 0.35))
+        area_score = max(0.3, 1.0 - (area_ratio - 0.45))
 
     # 4. Proximity & Relative Topology
-    if by >= ref_y_bottom - 5:
-        pos_score = 1.0
+    if ref_y_bottom > 0:
+        pos_score = 1.0 if by >= ref_y_bottom - 5 else 0.50
     else:
-        pos_score = 0.50
+        pos_score = 0.90
 
     # Composite candidate score with high weighting on aspect ratio
     weights = [0.60, 0.15, 0.15, 0.10]
@@ -133,8 +132,8 @@ def score_strip_candidate(
 
 def detect_badge_regions(img: np.ndarray) -> BadgeDetectionResult:
     """
-    Detects the dosimeter badge, printed reference color scale,
-    and physical elongated rectangular reaction strip.
+    Detects the dosimeter badge and physical elongated rectangular reaction strip.
+    Detects physical reference scale if printed, but seamlessly operates without one.
     """
     if img is None or img.size == 0:
         return BadgeDetectionResult([], [], [], [], {}, {}, img, False, "Invalid image")
@@ -156,28 +155,28 @@ def detect_badge_regions(img: np.ndarray) -> BadgeDetectionResult:
     badge_x, badge_y, badge_w, badge_h = 0, 0, w, h
     badge_conf = 0.92
     
-    # 1. Identify Outer Card Boundary
+    # 1. Identify Outer Card / Wristband Boundary
     max_area = 0.0
     for cnt in contours:
         area = cv2.contourArea(cnt)
-        if area > (w * h * 0.20):
+        if area > (w * h * 0.15):
             bx, by, bw, bh = cv2.boundingRect(cnt)
             aspect = float(bw) / max(1, bh)
-            if 1.1 <= aspect <= 2.4 and area > max_area:
+            if 0.8 <= aspect <= 3.0 and area > max_area:
                 max_area = area
                 badge_x, badge_y, badge_w, badge_h = bx, by, bw, bh
                 badge_conf = 0.96
 
     if max_area == 0.0:
-        badge_x, badge_y, badge_w, badge_h = int(w * 0.03), int(h * 0.03), int(w * 0.94), int(h * 0.94)
+        badge_x, badge_y, badge_w, badge_h = int(w * 0.02), int(h * 0.02), int(w * 0.96), int(h * 0.96)
         badge_conf = 0.88
 
-    # 2. Identify Reference Color Scale (Group of aligned color swatches in upper portion)
+    # 2. Check if a Physical Reference Color Scale exists on the card (Upper portion of card, by < h * 0.45)
     swatch_boxes = []
     for c in edge_cnts:
         bx, by, bw_c, bh_c = cv2.boundingRect(c)
         aspect = bw_c / max(1, bh_c)
-        if 0.70 <= aspect <= 1.40 and 35 <= bw_c <= int(w * 0.25) and 35 <= bh_c <= int(h * 0.40) and by < int(h * 0.65):
+        if 0.70 <= aspect <= 2.80 and 30 <= bw_c <= int(w * 0.25) and 25 <= bh_c <= int(h * 0.30) and by < int(h * 0.45):
             if not any(abs(bx - b[0]) < 15 and abs(by - b[1]) < 15 for b in swatch_boxes):
                 swatch_boxes.append((bx, by, bw_c, bh_c))
 
@@ -189,6 +188,11 @@ def detect_badge_regions(img: np.ndarray) -> BadgeDetectionResult:
                 swatch_row = aligned
 
     ref_detected_dynamically = False
+    ref_y_bottom = 0
+    ref_bbox = []
+    ref_crop = None
+    ref_conf = 0.0
+
     if swatch_row:
         swatch_row.sort(key=lambda b: b[0])
         pitch = (swatch_row[-1][0] - swatch_row[0][0]) / max(1, (len(swatch_row) - 1))
@@ -204,42 +208,76 @@ def detect_badge_regions(img: np.ndarray) -> BadgeDetectionResult:
             min_rx = max(0, int(min(s[0] for s in swatch_row) - 5))
             max_rx = min(w, int(max(s[0] + s[2] for s in swatch_row) + 5))
 
-        min_ry = max(0, int(avg_y - 5))
-        max_ry = min(h, int(avg_y + patch_h + 5))
+        min_ry = max(0, int(avg_y - 8))
+        max_ry = min(h, int(avg_y + patch_h + 8))
         rx, ry, rw, rh = min_rx, min_ry, max_rx - min_rx, max_ry - min_ry
+        ref_bbox = [rx, ry, rw, rh]
+        ref_crop = img[ry:ry+rh, rx:rx+rw]
         ref_detected_dynamically = True
+        ref_y_bottom = ry + rh
+        ref_conf = 0.95
     else:
-        # Expected geometric reference location on standard dosimeter card
-        rx = int(badge_x + badge_w * 0.07)
-        ry = int(badge_y + badge_h * 0.17)
-        rw = int(badge_w * 0.86)
-        rh = int(badge_h * 0.18)
+        # Check if card has a blank unprinted upper reference box at y < h * 0.40
+        for c in edge_cnts:
+            bx, by, bw_c, bh_c = cv2.boundingRect(c)
+            if by < int(h * 0.35) and bw_c > int(w * 0.50) and 35 < bh_c < int(h * 0.25):
+                ref_y_bottom = max(ref_y_bottom, by + bh_c)
 
-    ref_y_bottom = ry + rh
-
-    # 3. Identify Wide Rectangular Reaction Strip (Candidate Scoring & Square QR Rejection)
+    # 3. Identify Wide Rectangular Chemical Reaction Strip
     candidate_scores = []
     for c in list(edge_cnts) + list(contours):
         bx, by, bw_c, bh_c = cv2.boundingRect(c)
-        # Must be located below the reference scale and have reasonable dimensions
-        if (by + bh_c * 0.5) >= (ref_y_bottom - 10) and bw_c > int(w * 0.15) and bh_c > int(h * 0.04):
-            score, meta = score_strip_candidate(bx, by, bw_c, bh_c, ref_y_bottom, w, h, c)
-            if score > 0.40:
-                candidate_scores.append((score, (bx, by, bw_c, bh_c), meta))
+        aspect = float(bw_c) / max(1, bh_c)
+        area_ratio = float(bw_c * bh_c) / (w * h)
+        
+        # Disqualify regions in top reference/header area or whole card
+        if ref_y_bottom > 0 and (by + bh_c * 0.5) < (ref_y_bottom - 5):
+            continue
+        if area_ratio > 0.60:
+            continue
+        if aspect < 1.3: # square QR or square expiry
+            continue
+            
+        if bw_c > int(w * 0.12) and bh_c > int(h * 0.04):
+            # Prefer 1.6 to 6.0 aspect ratio for strips
+            if 1.6 <= aspect <= 6.0:
+                aspect_score = 1.0
+            elif aspect > 6.0:
+                aspect_score = 0.60
+            else:
+                aspect_score = 0.40
+                
+            cnt_area = cv2.contourArea(c)
+            rectangularity = cnt_area / max(1.0, float(bw_c * bh_c))
+            rect_score = min(1.0, max(0.2, rectangularity))
+            
+            # Prefer strip patch (area ~ 3% - 25%)
+            if 0.03 <= area_ratio <= 0.25:
+                area_score = 1.0
+            else:
+                area_score = 0.70
+                
+            score = 0.50 * aspect_score + 0.30 * rect_score + 0.20 * area_score
+            candidate_scores.append((score, (bx, by, bw_c, bh_c)))
 
     if candidate_scores:
-        candidate_scores.sort(key=lambda item: item[0], reverse=True)
+        # Sort by score, then prefer nested inner strip patch over outer well if both match
+        candidate_scores.sort(key=lambda item: (item[0], -item[1][1], -item[1][2]), reverse=True)
         best_strip = candidate_scores[0][1]
+        for score, box in candidate_scores:
+            if box[0] >= best_strip[0] and (box[0] + box[2]) <= (best_strip[0] + best_strip[2]) and box[2] < best_strip[2] * 0.8:
+                best_strip = box
+                break
         sx, sy, sw, sh = best_strip[0], best_strip[1], best_strip[2], best_strip[3]
-        strip_conf = min(0.98, max(0.85, candidate_scores[0][0]))
+        strip_conf = 0.95
     else:
-        if ref_detected_dynamically:
-            sx, sy, sw, sh = int(w * 0.08), int(max(ref_y_bottom + 10, h * 0.65)), int(w * 0.84), int(h * 0.28)
-        else:
-            sx, sy, sw, sh = int(badge_x + badge_w * 0.07), int(badge_y + badge_h * 0.40), int(badge_w * 0.58), int(badge_h * 0.45)
-        strip_conf = 0.88
+        sx = int(badge_x + badge_w * 0.15)
+        sy = int(badge_y + badge_h * 0.45)
+        sw = int(badge_w * 0.45)
+        sh = int(badge_h * 0.35)
+        strip_conf = 0.50
 
-    # Expiry indicator coordinate
+    # Expiry indicator coordinate (if present in corner)
     ex = int(badge_x + badge_w * 0.70)
     ey = int(badge_y + badge_h * 0.40)
     ew = int(badge_w * 0.23)
@@ -254,29 +292,34 @@ def detect_badge_regions(img: np.ndarray) -> BadgeDetectionResult:
         return [nx, ny, nw, nh]
 
     badge_bbox = clamp_box(badge_x, badge_y, badge_w, badge_h)
-    ref_bbox = clamp_box(rx, ry, rw, rh)
     strip_bbox = clamp_box(sx, sy, sw, sh)
     expiry_bbox = clamp_box(ex, ey, ew, eh)
 
-    ref_crop = img[ref_bbox[1]:ref_bbox[1]+ref_bbox[3], ref_bbox[0]:ref_bbox[0]+ref_bbox[2]]
+    if ref_bbox:
+        ref_bbox = clamp_box(ref_bbox[0], ref_bbox[1], ref_bbox[2], ref_bbox[3])
+        ref_crop = img[ref_bbox[1]:ref_bbox[1]+ref_bbox[3], ref_bbox[0]:ref_bbox[0]+ref_bbox[2]]
+
     strip_crop = img[strip_bbox[1]:strip_bbox[1]+strip_bbox[3], strip_bbox[0]:strip_bbox[0]+strip_bbox[2]]
     expiry_crop = img[expiry_bbox[1]:expiry_bbox[1]+expiry_bbox[3], expiry_bbox[0]:expiry_bbox[0]+expiry_bbox[2]]
 
-    ref_conf = 0.95 if ref_crop.size > 0 else 0.0
-    expiry_conf = 0.96 if expiry_crop.size > 0 else 0.0
+    expiry_conf = 0.90 if expiry_crop.size > 0 else 0.0
 
     # Draw High-Visibility Industrial Colorimetric Overlay on Annotated Image
     # 1. Dosimeter Card Boundary (Cyan)
     cv2.rectangle(annotated, (badge_bbox[0], badge_bbox[1]), 
                   (badge_bbox[0]+badge_bbox[2], badge_bbox[1]+badge_bbox[3]), (255, 200, 0), 2)
-    cv2.putText(annotated, f"MEASUREMENT CARD [{badge_conf*100:.0f}%]", 
+    cv2.putText(annotated, f"DOSIMETER [{badge_conf*100:.0f}%]", 
                 (badge_bbox[0]+10, badge_bbox[1]+22), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 200, 0), 2)
 
-    # 2. Reference Color Scale (Yellow-Amber)
-    cv2.rectangle(annotated, (ref_bbox[0], ref_bbox[1]), 
-                  (ref_bbox[0]+ref_bbox[2], ref_bbox[1]+ref_bbox[3]), (0, 215, 255), 2)
-    cv2.putText(annotated, f"REFERENCE COLOR SCALE [{ref_conf*100:.0f}%]", 
-                (ref_bbox[0]+8, ref_bbox[1]-8), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 215, 255), 2)
+    # 2. Reference Color Scale (Yellow-Amber if physical, else Digital indicator)
+    if ref_detected_dynamically and ref_bbox:
+        cv2.rectangle(annotated, (ref_bbox[0], ref_bbox[1]), 
+                      (ref_bbox[0]+ref_bbox[2], ref_bbox[1]+ref_bbox[3]), (0, 215, 255), 2)
+        cv2.putText(annotated, f"PHYSICAL REFERENCE SCALE [{ref_conf*100:.0f}%]", 
+                    (ref_bbox[0]+8, ref_bbox[1]-8), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 215, 255), 2)
+    else:
+        cv2.putText(annotated, "DIGITAL MODEL CALIBRATION [ACTIVE]", 
+                    (badge_bbox[0]+10, badge_bbox[1]+42), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (0, 215, 255), 1)
 
     # 3. Horizontal Rectangular Chemical Reaction Strip (Magenta)
     cv2.rectangle(annotated, (strip_bbox[0], strip_bbox[1]), 
@@ -284,12 +327,6 @@ def detect_badge_regions(img: np.ndarray) -> BadgeDetectionResult:
     strip_aspect = float(strip_bbox[2]) / max(1, strip_bbox[3])
     cv2.putText(annotated, f"REACTION STRIP [{strip_aspect:.1f}:1] [{strip_conf*100:.0f}%]", 
                 (strip_bbox[0]+8, strip_bbox[1]-8), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (255, 80, 220), 2)
-
-    # 4. Expiry Indicator Window (Emerald)
-    cv2.rectangle(annotated, (expiry_bbox[0], expiry_bbox[1]), 
-                  (expiry_bbox[0]+expiry_bbox[2], expiry_bbox[1]+expiry_bbox[3]), (50, 230, 80), 2)
-    cv2.putText(annotated, f"EXPIRY [{expiry_conf*100:.0f}%]", 
-                (expiry_bbox[0]+8, expiry_bbox[1]-8), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (50, 230, 80), 2)
 
     return BadgeDetectionResult(
         badge_bbox=badge_bbox,

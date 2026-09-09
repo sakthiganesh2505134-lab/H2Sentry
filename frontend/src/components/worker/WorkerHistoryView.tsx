@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Clock, Layers } from 'lucide-react';
 import type { Reading, Worker } from '../../types';
 
 interface WorkerHistoryViewProps {
@@ -13,143 +13,167 @@ export const WorkerHistoryView: React.FC<WorkerHistoryViewProps> = ({
   currentWorker,
   onSelectReading,
 }) => {
-  const [timeTab, setTimeTab] = useState<'today' | 'week' | 'month'>('week');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
 
   // Filter readings
   const filteredReadings = readings.filter((r) => {
-    if (statusFilter !== 'ALL' && r.status !== statusFilter) return false;
+    if (statusFilter === 'REVIEW') {
+      return r.status === 'HIGH' || r.status === 'CRITICAL' || r.status === 'MODERATE';
+    }
+    if (statusFilter === 'NOMINAL') {
+      return r.status === 'LOW' || (r.status as string) === 'SAFE';
+    }
     return true;
   });
 
   const getStatusDisplay = (status: string) => {
-    const s = status.toUpperCase();
+    const s = (status || 'LOW').toUpperCase();
     if (s === 'DANGER' || s === 'CRITICAL' || s === 'HIGH') {
-      return { text: 'DANGER', dotColor: 'bg-figma-danger', textColor: 'text-figma-danger' };
+      return { 
+        text: 'Action level review recommended', 
+        badgeBg: 'bg-red-50 border-red-200 text-red-700',
+        dotColor: 'bg-red-500'
+      };
     }
     if (s === 'ELEVATED' || s === 'MODERATE' || s === 'WARNING') {
-      return { text: 'ELEVATED', dotColor: 'bg-figma-warning', textColor: 'text-figma-warning' };
+      return { 
+        text: 'Review recommended', 
+        badgeBg: 'bg-amber-50 border-amber-200 text-amber-700',
+        dotColor: 'bg-amber-500'
+      };
     }
-    return { text: 'SAFE', dotColor: 'bg-figma-safe', textColor: 'text-figma-safe' };
+    return { 
+      text: 'Within configured range', 
+      badgeBg: 'bg-emerald-50 border-emerald-200 text-emerald-700',
+      dotColor: 'bg-emerald-500'
+    };
   };
 
-  const formatTimestamp = (ts: string) => {
+  const formatTimestamp = (ts?: string) => {
+    if (!ts) return { day: 'Today', time: '16:42' };
     try {
       const date = new Date(ts);
       const isToday = new Date().toDateString() === date.toDateString();
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const isYesterday = yesterday.toDateString() === date.toDateString();
+
       const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      if (isToday) return `Today, ${timeStr}`;
+      if (isToday) return { day: 'Today', time: timeStr };
+      if (isYesterday) return { day: 'Yesterday', time: timeStr };
       
       const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      return `${monthNames[date.getMonth()]} ${date.getDate()}, ${timeStr}`;
+      return { day: `${date.getDate().toString().padStart(2, '0')} ${monthNames[date.getMonth()]}`, time: timeStr };
     } catch {
-      return ts;
+      return { day: '08 Sep', time: '16:42' };
     }
   };
 
   return (
-    <div className="flex flex-col min-h-[580px] h-full p-5 space-y-4 animate-fadeIn overflow-y-auto">
+    <div className="flex flex-col min-h-[580px] h-full p-4 space-y-4 animate-fadeIn overflow-y-auto text-slate-900 select-none">
       {/* Top Title */}
-      <div>
-        <h2 className="text-2xl font-bold text-white tracking-tight font-sans">
-          Exposure Log
-        </h2>
-        <span className="text-xs font-mono text-figma-textMuted">
-          Operator: {currentWorker?.name || 'James Miller'} ({currentWorker?.employee_id || '#8841-A'})
-        </span>
+      <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+        <div>
+          <span className="text-[10px] font-mono uppercase tracking-widest text-sky-700 font-bold block">
+            PASSIVE COLORIMETRIC RECORD
+          </span>
+          <h1 className="text-xl font-black text-slate-900 font-mono">
+            H₂S Exposure History
+          </h1>
+          <span className="text-xs font-mono text-slate-500">
+            Worker: {currentWorker?.name || 'Ravi'} ({currentWorker?.employee_id || 'EMP1024'})
+          </span>
+        </div>
+        <div className="p-2 rounded-xl bg-white border border-slate-200 shadow-sm text-sky-600">
+          <Clock className="w-5 h-5" />
+        </div>
       </div>
 
-      {/* Period Filter Tabs Matching Figma */}
-      <div className="grid grid-cols-3 gap-1.5 p-1 rounded-xl bg-figma-surface border border-figma-border">
-        <button
-          onClick={() => setTimeTab('today')}
-          className={`py-2 text-xs font-bold font-sans rounded-lg transition-all ${
-            timeTab === 'today'
-              ? 'bg-figma-accent text-black shadow-md shadow-figma-accent/20'
-              : 'text-figma-textMuted hover:text-white'
-          }`}
-        >
-          Today
-        </button>
-        <button
-          onClick={() => setTimeTab('week')}
-          className={`py-2 text-xs font-bold font-sans rounded-lg transition-all ${
-            timeTab === 'week'
-              ? 'bg-figma-accent text-black shadow-md shadow-figma-accent/20'
-              : 'text-figma-textMuted hover:text-white'
-          }`}
-        >
-          This Week
-        </button>
-        <button
-          onClick={() => setTimeTab('month')}
-          className={`py-2 text-xs font-bold font-sans rounded-lg transition-all ${
-            timeTab === 'month'
-              ? 'bg-figma-accent text-black shadow-md shadow-figma-accent/20'
-              : 'text-figma-textMuted hover:text-white'
-          }`}
-        >
-          This Month
-        </button>
+      {/* Scientifically Honest Disclaimer Callout */}
+      <div className="p-3 rounded-xl bg-sky-50 border border-sky-200 text-xs text-sky-900 font-mono space-y-1">
+        <div className="flex items-center gap-1.5 font-bold">
+          <Layers className="w-3.5 h-3.5 text-sky-600" />
+          <span>Passive Cumulative Estimate</span>
+        </div>
+        <p className="text-[11px] text-slate-600 leading-relaxed font-sans">
+          Values are expressed in <strong>ppm·min</strong> (estimated cumulative passive exposure). These measurements represent integrated shift dose, not instantaneous airborne peaks.
+        </p>
       </div>
 
       {/* Filter Status Chips */}
       <div className="flex items-center space-x-2 overflow-x-auto scrollbar-none py-0.5">
-        {['ALL', 'SAFE', 'MODERATE', 'CRITICAL'].map((f) => (
+        {[
+          { id: 'ALL', label: 'All Records' },
+          { id: 'NOMINAL', label: 'Within Configured Range' },
+          { id: 'REVIEW', label: 'Review Recommended' }
+        ].map((f) => (
           <button
-            key={f}
-            onClick={() => setStatusFilter(f)}
-            className={`px-2.5 py-1 rounded-full text-[10px] font-mono transition-colors ${
-              statusFilter === f
-                ? 'bg-figma-card text-figma-accent border border-figma-accent/50 font-bold'
-                : 'text-figma-textMuted hover:text-white bg-figma-surface border border-figma-border'
+            key={f.id}
+            onClick={() => setStatusFilter(f.id)}
+            className={`px-3 py-1.5 rounded-full text-xs font-mono transition-colors ${
+              statusFilter === f.id
+                ? 'bg-sky-600 text-white font-bold shadow-sm'
+                : 'text-slate-600 hover:text-slate-900 bg-white border border-slate-200 shadow-sm'
             }`}
           >
-            {f === 'ALL' ? 'All Logs' : f}
+            {f.label}
           </button>
         ))}
       </div>
 
-      {/* Exposure History Card List Matching Figma */}
+      {/* Chronological Reading List */}
       <div className="space-y-2.5 flex-1 overflow-y-auto pr-0.5">
         {filteredReadings.length === 0 ? (
-          <div className="text-center py-12 text-xs font-mono text-figma-textMuted">
-            No exposure records logged for this period.
+          <div className="text-center py-12 text-xs font-mono text-slate-500 bg-white rounded-xl border border-slate-200 p-6">
+            No exposure readings recorded yet for this filter.
           </div>
         ) : (
           filteredReadings.map((item) => {
             const statusInfo = getStatusDisplay(item.status);
+            const formatted = formatTimestamp(item.timestamp);
+            const badgeId = item.badge_id || currentWorker?.active_badge_id || 'H2S-BDG-2026-000381';
+            const calVer = item.calibration_version || 'CAL-v0.1-demo';
+
             return (
               <div
                 key={item.id}
                 onClick={() => onSelectReading(item)}
-                className="figma-card p-4 hover:border-figma-borderLight cursor-pointer transition-all flex items-center justify-between group active:scale-[0.99]"
+                className="p-4 rounded-xl bg-white border border-slate-200 hover:border-slate-300 shadow-card hover:shadow-card-hover cursor-pointer transition-all flex items-center justify-between group active:scale-[0.99]"
               >
-                <div className="space-y-1">
-                  <div className="text-xs font-mono text-white font-semibold">
-                    {formatTimestamp(item.timestamp)}
+                <div className="space-y-1.5 flex-1 pr-3">
+                  <div className="flex items-center space-x-2 text-xs font-mono">
+                    <span className="font-bold text-slate-900">{formatted.day}</span>
+                    <span className="text-slate-400">•</span>
+                    <span className="text-slate-500">{formatted.time}</span>
+                    <span className="text-slate-400">•</span>
+                    <span className="text-sky-800 font-semibold">{badgeId}</span>
                   </div>
+
                   <div className="flex items-center space-x-2">
-                    <span className={`w-2 h-2 rounded-full ${statusInfo.dotColor}`} />
-                    <span className={`text-[11px] font-bold font-mono tracking-wider uppercase ${statusInfo.textColor}`}>
-                      {statusInfo.text}
+                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-mono font-bold border ${statusInfo.badgeBg} flex items-center gap-1`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${statusInfo.dotColor}`} />
+                      <span>{statusInfo.text}</span>
                     </span>
-                    <span className="text-[10px] text-figma-textMuted">
-                      • {item.shift || 'Shift A'}
+                    <span className="text-[10px] font-mono text-slate-400">
+                      {item.shift || 'Current shift'}
                     </span>
+                  </div>
+
+                  <div className="text-[10px] font-mono text-slate-400">
+                    Calibration: {calVer} • Conf: {(item.confidence * 100).toFixed(0)}%
                   </div>
                 </div>
 
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2 shrink-0">
                   <div className="text-right">
-                    <div className="text-lg sm:text-xl font-black text-white font-sans tracking-tight">
-                      {item.equivalent_8h_twa_ppm.toFixed(1)} <span className="text-xs font-mono text-figma-textMuted font-normal">ppm</span>
+                    <div className="text-xl font-black text-slate-900 font-mono tracking-tight">
+                      {item.estimated_dose.toFixed(0)} <span className="text-xs font-mono text-sky-700 font-normal">ppm·min</span>
                     </div>
-                    <div className="text-[10px] font-mono text-figma-textMuted">
-                      {item.estimated_dose.toFixed(0)} ppm·min
+                    <div className="text-[10px] font-mono text-slate-500">
+                      ~{item.equivalent_8h_twa_ppm.toFixed(2)} ppm 8h TWA
                     </div>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-figma-textMuted group-hover:text-figma-accent transition-colors" />
+                  <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-sky-600 transition-colors" />
                 </div>
               </div>
             );

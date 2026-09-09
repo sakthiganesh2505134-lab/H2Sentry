@@ -95,7 +95,7 @@ backend/data/uploads/*
 !backend/data/uploads/.gitkeep
 
 # ------------------------------------------------------------------------------
-# 6. Temporary & Scratch Files
+# 6. Temporary, Large Generated Datasets & Scratch Files
 # ------------------------------------------------------------------------------
 scratch/
 tmp/
@@ -105,6 +105,9 @@ temp/
 *.swp
 *.swo
 *~
+*.zip
+data/calibration/synthetic_wristband_dataset/
+data/calibration/extracted_dataset_strips/
 
 # ------------------------------------------------------------------------------
 # 7. IDE & OS Metadata

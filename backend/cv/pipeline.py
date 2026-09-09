@@ -70,7 +70,7 @@ def run_dosimeter_analysis_pipeline(
         issue_str = ", ".join(quality_result.get("issues", ["Poor lighting or blur."]))
         return {
             "success": False,
-            "error": f"Image quality insufficient: {issue_str}",
+            "error": f"STRIP IMAGE NOT READABLE: {issue_str}",
             "image_quality": quality_result
         }
 
@@ -79,22 +79,15 @@ def run_dosimeter_analysis_pipeline(
     if not detection_result.success:
         return {
             "success": False,
-            "error": detection_result.error_message or "Failed to detect dosimeter regions.",
+            "error": "REACTION STRIP NOT DETECTED: Failed to detect dosimeter reaction zone.",
             "image_quality": quality_result
         }
 
-    # 4. Stage 3: Reference Color Scale Calibration
+    # 4. Stage 3: Color Calibration (Digital Model / Physical Reference if Present)
     ref_crop = detection_result.cropped_regions.get("reference")
     calibrator = calibrate_reference_scale(ref_crop)
     if calibrator.warnings:
         all_warnings.extend(calibrator.warnings)
-    if not calibrator.success:
-        return {
-            "success": False,
-            "error": "Reference color scale not detected. Please ensure both the reference scale and the H2S reaction strip are within the frame.",
-            "image_quality": quality_result,
-            "detections": detection_result.to_dict()
-        }
 
     # 5. Stage 4: Color Feature Extraction
     strip_crop = detection_result.cropped_regions.get("reaction_strip")
@@ -102,7 +95,7 @@ def run_dosimeter_analysis_pipeline(
     if not color_features.get("success", False):
         return {
             "success": False,
-            "error": "Chemical reaction strip not detected or unreadable. Please align the strip inside the framing guide.",
+            "error": "REACTION STRIP NOT DETECTED: Chemical reaction strip not detected or unreadable. Please align the strip inside the framing guide.",
             "image_quality": quality_result,
             "detections": detection_result.to_dict()
         }
@@ -123,15 +116,26 @@ def run_dosimeter_analysis_pipeline(
         all_warnings.extend(exposure_result["warnings"])
 
     # 8. Stage 7: Confidence Calculation
+    has_physical_ref = (ref_crop is not None and getattr(calibrator, "calibration_mode", "") == "PHYSICAL_REFERENCE_SCALE")
     confidence_result = calculate_confidence_score(
         image_quality=quality_result,
         detection_confidences=detection_result.confidences,
         calibration_quality=calibrator.calibration_quality,
         uniformity_score=color_features.get("uniformity_score", 0.8),
-        expiry_status=expiry_status
+        expiry_status=expiry_status,
+        has_physical_reference=has_physical_ref
     )
     if confidence_result.get("warnings"):
         all_warnings.extend(confidence_result["warnings"])
+
+    if confidence_result.get("confidence", 1.0) < 0.20:
+        return {
+            "success": False,
+            "error": "READING COULD NOT BE CONFIRMED: Confidence score below minimum validation threshold.",
+            "image_quality": quality_result,
+            "detections": detection_result.to_dict(),
+            "confidence": confidence_result
+        }
 
     # 9. Pipeline Duration
     duration_ms = round((time.perf_counter() - t_start) * 1000.0, 1)

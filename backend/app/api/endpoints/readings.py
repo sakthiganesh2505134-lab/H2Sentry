@@ -97,16 +97,18 @@ def get_reading_by_id(reading_id: str, db: Session = Depends(get_db)):
 def save_reading(payload: ReadingCreate, db: Session = Depends(get_db)):
     new_id = f"scan-{uuid.uuid4().hex[:8]}"
     
-    # Save base64 image if provided
-    img_path = None
-    annotated_path = None
+    # Save base64 image if provided and record portable relative URL
+    img_relative_url = None
+    annotated_relative_url = None
+    
     if payload.image_base64:
         try:
             b64_data = payload.image_base64.split(",")[-1]
             img_filename = f"{new_id}_raw.jpg"
-            img_path = os.path.join(UPLOADS_DIR, img_filename)
-            with open(img_path, "wb") as f:
+            img_disk_path = os.path.join(UPLOADS_DIR, img_filename)
+            with open(img_disk_path, "wb") as f:
                 f.write(base64.b64decode(b64_data))
+            img_relative_url = f"/static/uploads/{img_filename}"
         except Exception:
             pass
             
@@ -114,9 +116,10 @@ def save_reading(payload: ReadingCreate, db: Session = Depends(get_db)):
         try:
             b64_data = payload.annotated_image_base64.split(",")[-1]
             ann_filename = f"{new_id}_annotated.jpg"
-            annotated_path = os.path.join(UPLOADS_DIR, ann_filename)
-            with open(annotated_path, "wb") as f:
+            ann_disk_path = os.path.join(UPLOADS_DIR, ann_filename)
+            with open(ann_disk_path, "wb") as f:
                 f.write(base64.b64decode(b64_data))
+            annotated_relative_url = f"/static/uploads/{ann_filename}"
         except Exception:
             pass
 
@@ -141,11 +144,12 @@ def save_reading(payload: ReadingCreate, db: Session = Depends(get_db)):
         detections_json=json.dumps(payload.detections or {}),
         warnings_json=json.dumps(payload.warnings or []),
         source=payload.source,
-        image_path=img_path,
-        annotated_image_path=annotated_path
+        image_path=img_relative_url,
+        annotated_image_path=annotated_relative_url
     )
     
     db.add(reading)
     db.commit()
     db.refresh(reading)
     return reading.to_dict()
+

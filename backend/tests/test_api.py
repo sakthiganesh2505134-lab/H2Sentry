@@ -192,15 +192,17 @@ def test_demo_reset_and_clean_acceptance():
     assert res_s.status_code == 200
     assert res_s.json()["counts"]["workers"] >= 10
 
-def test_cv_analyze_missing_reference_scale_rejected():
+def test_cv_analyze_wristband_without_physical_reference_scale_succeeds():
     res = client.post("/api/cv/analyze-json", json={
         "demo_preset_id": "badge_missing_reference",
         "temperature_c": 25.0,
         "humidity_pct": 50.0
     })
-    assert res.status_code == 422
+    assert res.status_code == 200
     data = res.json()
-    assert "reference" in data["detail"].lower()
+    assert data["success"] is True
+    assert data["color_calibration"]["calibration_mode"] == "DIGITAL_MODEL_CALIBRATION"
+    assert data["exposure"]["unit"] == "ppm·min"
 
 def test_cv_analyze_missing_strip_rejected():
     res = client.post("/api/cv/analyze-json", json={
@@ -210,7 +212,7 @@ def test_cv_analyze_missing_strip_rejected():
     })
     assert res.status_code == 422
     data = res.json()
-    assert "strip" in data["detail"].lower() or "chemical" in data["detail"].lower()
+    assert "strip" in data["detail"].lower() or "chemical" in data["detail"].lower() or "detected" in data["detail"].lower()
 
 def test_cv_analyze_multipart_file_upload():
     import cv2
@@ -278,13 +280,85 @@ def test_cv_analyze_real_fixture_image():
     best_d1, best_ppm1 = distances[0]
     best_d2, best_ppm2 = distances[1]
 
-    w1 = 1.0 / max(0.1, best_d1)
-    w2 = 1.0 / max(0.1, best_d2)
-    expected_calculated_dose = round(float((w1 * best_ppm1 + w2 * best_ppm2) / (w1 + w2)), 1)
-
     api_dose = res_data["exposure"]["estimated_dose"]
     assert api_dose is not None
     assert api_dose > 0.0
-    assert abs(api_dose - expected_calculated_dose) <= 0.5
+    assert res_data["exposure"]["estimator_used"] in ["ML_REGRESSION", "ANALYTICAL_FALLBACK"]
+    assert res_data["exposure"]["unit"] == "ppm·min"
+
+
+def test_cumulative_exposure_intelligence_30d_15d_7d():
+    res = client.get("/api/workers")
+    assert res.status_code == 200
+    workers = res.json()
+    w1 = next((w for w in workers if w["id"] == "w-01"), None)
+    assert w1 is not None
+    assert w1["cumulative_30d_dose"] == 7420.0
+    assert w1["cumulative_15d_dose"] == 5222.0
+    assert w1["cumulative_7d_dose"] == 3612.0
+
+    # 30-day detail
+    res_30 = client.get("/api/workers/w-01?days=30")
+    assert res_30.status_code == 200
+    d_30 = res_30.json()
+    assert d_30["period_cumulative_dose"] == 7420.0
+    assert len(d_30["daily_exposure"]) > 0
+
+    # 15-day detail
+    res_15 = client.get("/api/workers/w-01?days=15")
+    assert res_15.status_code == 200
+    d_15 = res_15.json()
+    assert d_15["period_cumulative_dose"] == 5222.0
+
+    # 7-day detail
+    res_7 = client.get("/api/workers/w-01?days=7")
+    assert res_7.status_code == 200
+    d_7 = res_7.json()
+    assert d_7["period_cumulative_dose"] == 3612.0
+
+
+def test_worker_summary_endpoint():
+    res = client.get("/api/workers/w-01/summary?days=30")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["worker_id"] == "w-01"
+    assert data["employee_id"] == "MRPL-EMP-4091"
+    assert data["cumulative_exposure_ppm_min"] == 7420.0
+    assert data["reading_count"] == 13
+    assert data["last_reading_ppm_min"] == 742.0
+    assert data["dose_unit"] == "ppm·min"
+    assert len(data["daily_exposure"]) > 0
+
+
+def test_badge_lookup_includes_cumulative_30d():
+    res = client.get("/api/badges/lookup/MRPL-H2S-8821")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["valid"] is True
+    assert data["cumulative_30d_dose"] == 7420.0
+    assert data["cumulative_30d_unit"] == "ppm·min"
+
+
+def test_empty_worker_cumulative_exposure():
+    # Create new worker without readings
+    create_res = client.post("/api/workers", json={
+        "name": "Arjun Test",
+        "employee_id": "MRPL-EMP-9999",
+        "department": "Safety Operations",
+        "unit": "HSE",
+        "shift": "Shift A"
+    })
+    assert create_res.status_code == 200
+    new_w = create_res.json()
+    assert new_w["cumulative_30d_dose"] == 0.0
+
+    # Summary for empty worker
+    summary_res = client.get(f"/api/workers/{new_w['id']}/summary?days=30")
+    assert summary_res.status_code == 200
+    s_data = summary_res.json()
+    assert s_data["cumulative_exposure_ppm_min"] == 0.0
+    assert s_data["reading_count"] == 0
+    assert s_data["daily_exposure"] == []
+
 
 

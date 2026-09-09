@@ -41,10 +41,12 @@ class DetectionsResult(BaseModel):
 
 class ColorCalibrationResult(BaseModel):
     success: bool
+    calibration_mode: Optional[str] = "DIGITAL_MODEL_CALIBRATION"
     calibration_quality: float
     residual_error: float
     channel_gains: Dict[str, float]
     observed_patches: List[Dict[str, Any]] = []
+    cumulative_scale_swatches: Optional[List[Dict[str, Any]]] = None
     warnings: List[str] = []
 
 class ExpiryResult(BaseModel):
@@ -61,6 +63,10 @@ class ExposureResult(BaseModel):
     status_description: str
     equivalent_8h_twa_ppm: float
     raw_dose_uncompensated: Optional[float] = None
+    estimator_used: Optional[str] = "ML_REGRESSION"
+    response_state: Optional[str] = "DYNAMIC_RESPONSE"
+    above_calibration_range: Optional[bool] = False
+    ml_details: Optional[Dict[str, Any]] = None
     calibration_version: str
     warnings: List[str] = []
     environmental_factors: Dict[str, Any]
@@ -211,13 +217,42 @@ class BadgeLookupResponse(BaseModel):
     department: Optional[str] = None
     unit: Optional[str] = None
     shift: Optional[str] = None
+    issued_at: Optional[str] = None
     expires_at: Optional[str] = None
+    last_reading_dose: Optional[float] = None
+    last_reading_unit: Optional[str] = "ppm·min"
+    last_reading_timestamp: Optional[str] = None
+    measurement_period: Optional[str] = "Current shift"
+    cumulative_30d_dose: Optional[float] = 0.0
+    cumulative_30d_unit: Optional[str] = "ppm·min"
     calibration_version: str = "CAL-v0.1-demo"
     message: Optional[str] = None
 
 # -------------------------------------------------------------
 # Worker Schemas
 # -------------------------------------------------------------
+class DailyExposureItem(BaseModel):
+    date: str # YYYY-MM-DD
+    day_label: str # e.g. "08 Sep" or "Mon"
+    exposure_ppm_min: float
+    readings_count: int
+
+class WorkerSummaryResponse(BaseModel):
+    worker_id: str
+    employee_id: str
+    worker_name: str
+    department: Optional[str] = None
+    unit: Optional[str] = None
+    period_days: int = 30
+    cumulative_exposure_ppm_min: float
+    reading_count: int
+    last_reading_ppm_min: Optional[float] = None
+    last_reading_timestamp: Optional[str] = None
+    first_reading_timestamp: Optional[str] = None
+    daily_exposure: List[DailyExposureItem] = []
+    dose_unit: str = "ppm·min"
+    scientific_disclosure: str = "Sum of recorded passive exposure estimates during the selected period."
+
 class WorkerCreate(BaseModel):
     name: str
     employee_id: str
@@ -247,12 +282,19 @@ class WorkerResponse(BaseModel):
     badge_status: Optional[str] = "VALID"
     latest_reading: Optional[ReadingResponse] = None
     cumulative_shift_dose: Optional[float] = 0.0
+    cumulative_30d_dose: Optional[float] = 0.0
+    cumulative_15d_dose: Optional[float] = 0.0
+    cumulative_7d_dose: Optional[float] = 0.0
 
 class WorkerDetailResponse(BaseModel):
     worker: WorkerResponse
     badge: Optional[Dict[str, Any]] = None
     readings_history: List[ReadingResponse] = []
     total_cumulative_dose: float = 0.0
+    period_days: int = 30
+    period_cumulative_dose: float = 0.0
+    first_reading_timestamp: Optional[str] = None
+    daily_exposure: List[DailyExposureItem] = []
     lifetime_scans_count: int = 0
     exposure_trend: List[Dict[str, Any]] = []
 

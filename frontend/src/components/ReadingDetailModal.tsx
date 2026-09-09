@@ -21,24 +21,24 @@ export const ReadingDetailModal: React.FC<ReadingDetailModalProps> = ({
       case 'LOW':
       case 'SAFE':
         return (
-          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold font-mono bg-cyan-950/80 text-cyan-400 border border-cyan-500/40">
-            <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> NORMAL BASELINE ({reading.estimated_dose.toFixed(0)} ppm·min)
+          <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold font-mono bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> WITHIN RANGE ({reading.estimated_dose.toFixed(0)} ppm·min)
           </span>
         );
       case 'MODERATE':
       case 'ELEVATED':
       case 'WARNING':
         return (
-          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold font-mono bg-amber-950/80 text-amber-400 border border-amber-500/40">
-            <AlertTriangle className="w-3.5 h-3.5 mr-1" /> ATTENTION REQUIRED ({reading.estimated_dose.toFixed(0)} ppm·min)
+          <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold font-mono bg-amber-50 text-amber-700 border border-amber-200">
+            <AlertTriangle className="w-3.5 h-3.5 mr-1" /> REVIEW RECOMMENDED ({reading.estimated_dose.toFixed(0)} ppm·min)
           </span>
         );
       case 'HIGH':
       case 'CRITICAL':
       case 'DANGER':
         return (
-          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold font-mono bg-red-950/80 text-red-400 border border-red-500/40 animate-pulse">
-            <ShieldAlert className="w-3.5 h-3.5 mr-1" /> REQUIRES REVIEW ({reading.estimated_dose.toFixed(0)} ppm·min)
+          <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold font-mono bg-red-50 text-red-700 border border-red-200">
+            <ShieldAlert className="w-3.5 h-3.5 mr-1" /> ACTION THRESHOLD ({reading.estimated_dose.toFixed(0)} ppm·min)
           </span>
         );
       default:
@@ -49,35 +49,35 @@ export const ReadingDetailModal: React.FC<ReadingDetailModalProps> = ({
   const getExpiryBadge = (status: string) => {
     switch (status) {
       case 'VALID':
-        return <span className="text-emerald-400 font-mono text-xs bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800">VALID</span>;
+        return <span className="text-emerald-700 font-mono text-xs bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 font-semibold">VALID</span>;
       case 'EXPIRING_SOON':
-        return <span className="text-amber-400 font-mono text-xs bg-amber-950/60 px-2 py-0.5 rounded border border-amber-800">EXPIRING SOON</span>;
+        return <span className="text-amber-700 font-mono text-xs bg-amber-50 px-2 py-0.5 rounded border border-amber-200 font-semibold">EXPIRING SOON</span>;
       case 'EXPIRED':
-        return <span className="text-red-400 font-mono text-xs bg-red-950/60 px-2 py-0.5 rounded border border-red-800 font-semibold">EXPIRED</span>;
+        return <span className="text-red-700 font-mono text-xs bg-red-50 px-2 py-0.5 rounded border border-red-200 font-bold">EXPIRED</span>;
       default:
-        return <span className="text-slate-400 font-mono text-xs">{status}</span>;
+        return <span className="text-slate-600 font-mono text-xs">{status}</span>;
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn select-none">
-      <div className="figma-card max-w-2xl w-full max-h-[90vh] overflow-y-auto border-figma-border">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn select-none">
+      <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-slate-200 shadow-2xl">
         {/* Modal Header */}
-        <div className="flex items-center justify-between p-5 border-b border-figma-border/70">
+        <div className="flex items-center justify-between p-5 border-b border-slate-200">
           <div className="flex items-center space-x-3">
-            <div className="w-9 h-9 rounded-xl bg-figma-card border border-figma-border flex items-center justify-center text-cyan-400">
+            <div className="w-9 h-9 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-sky-700">
               <Gauge className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base sm:text-lg font-bold text-white font-mono uppercase">
+              <h3 className="text-base sm:text-lg font-bold text-slate-900 font-sans">
                 Exposure Scan Dossier
               </h3>
-              <p className="text-xs font-mono text-figma-textMuted">Record ID: {reading.id}</p>
+              <p className="text-xs font-mono text-slate-500">Record ID: {reading.id}</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-figma-textMuted hover:text-white rounded-lg hover:bg-figma-card transition-colors"
+            className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -86,81 +86,81 @@ export const ReadingDetailModal: React.FC<ReadingDetailModalProps> = ({
         {/* Modal Content */}
         <div className="p-6 space-y-6">
           {/* Main Verdict Card */}
-          <div className="p-5 rounded-xl bg-figma-card border border-figma-border/80 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="p-5 rounded-xl bg-slate-50 border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <span className="text-xs font-mono text-figma-textMuted uppercase tracking-wider">Estimated Cumulative Exposure</span>
+              <span className="text-xs font-mono text-slate-500 uppercase tracking-wider font-semibold">Estimated Cumulative Exposure</span>
               <div className="flex items-baseline space-x-2 mt-1">
-                <span className="text-3xl font-extrabold text-white tracking-tight font-mono">
+                <span className="text-3xl font-extrabold text-slate-900 tracking-tight font-mono">
                   {reading.estimated_dose.toFixed(0)}
                 </span>
-                <span className="text-sm font-semibold text-cyan-400 font-mono">{reading.dose_unit}</span>
+                <span className="text-sm font-semibold text-slate-600 font-mono">{reading.dose_unit || 'ppm·min'}</span>
               </div>
               <div className="flex items-center space-x-2 mt-2">
-                <span className="text-xs text-figma-textSecondary font-mono">
-                  Equivalent 8-hour TWA: <strong className="text-white">{reading.equivalent_8h_twa_ppm.toFixed(2)} ppm</strong>
+                <span className="text-xs text-slate-600 font-mono">
+                  Equivalent 8-hour TWA: <strong className="text-slate-900">{reading.equivalent_8h_twa_ppm.toFixed(2)} ppm</strong>
                 </span>
               </div>
             </div>
 
             <div className="flex flex-col items-start md:items-end space-y-2">
               {getStatusBadge(reading.status)}
-              <span className="text-xs font-mono text-figma-textMuted">
-                Confidence: <strong className="text-emerald-400">{(reading.confidence * 100).toFixed(0)}%</strong>
+              <span className="text-xs font-mono text-slate-600">
+                Confidence: <strong className="text-emerald-700">{(reading.confidence * 100).toFixed(0)}%</strong>
               </span>
             </div>
           </div>
 
           {/* Threshold Comparison Bar */}
-          <div className="figma-card p-4">
+          <div className="p-4 bg-white rounded-xl border border-slate-200">
             <ExposureThresholdBar currentValue={reading.equivalent_8h_twa_ppm} maxScale={25} />
           </div>
 
           {/* Worker & Environmental Metadata */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
-            <div className="p-3 rounded-lg bg-figma-card border border-figma-border/50">
-              <span className="text-figma-textMuted block text-[10px] uppercase">Worker</span>
-              <span className="font-bold text-white block truncate">{reading.worker_name || 'Rajesh Kumar'}</span>
-              <span className="text-figma-textMuted text-[10px]">{reading.worker_employee_id || '#8841-A'}</span>
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+              <span className="text-slate-500 block text-[10px] uppercase font-semibold">Worker</span>
+              <span className="font-bold text-slate-900 block truncate">{reading.worker_name || 'Rajesh Kumar'}</span>
+              <span className="text-slate-500 text-[10px]">{reading.worker_employee_id || '#8841-A'}</span>
             </div>
 
-            <div className="p-3 rounded-lg bg-figma-card border border-figma-border/50">
-              <span className="text-figma-textMuted block text-[10px] uppercase">Dosimeter ID</span>
-              <span className="font-bold text-cyan-400 block truncate">{reading.badge_id || 'H2S-BDG-2026-000381'}</span>
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+              <span className="text-slate-500 block text-[10px] uppercase font-semibold">Dosimeter ID</span>
+              <span className="font-bold text-sky-700 block truncate">{reading.badge_id || 'H2S-BDG-2026-000381'}</span>
               <div className="mt-0.5">{getExpiryBadge(reading.expiry_status)}</div>
             </div>
 
-            <div className="p-3 rounded-lg bg-figma-card border border-figma-border/50">
-              <span className="text-figma-textMuted block text-[10px] uppercase">Shift & Time</span>
-              <span className="font-bold text-white block">{reading.shift || 'Shift A'}</span>
-              <span className="text-figma-textMuted text-[10px]">
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+              <span className="text-slate-500 block text-[10px] uppercase font-semibold">Shift & Time</span>
+              <span className="font-bold text-slate-900 block">{reading.shift || 'Shift A'}</span>
+              <span className="text-slate-500 text-[10px]">
                 {reading.timestamp ? new Date(reading.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '09:26 AM'}
               </span>
             </div>
 
-            <div className="p-3 rounded-lg bg-figma-card border border-figma-border/50">
-              <span className="text-figma-textMuted block text-[10px] uppercase">Environment</span>
-              <span className="font-bold text-white block">{reading.temperature_c}°C</span>
-              <span className="text-figma-textMuted text-[10px]">{reading.humidity_pct}% RH</span>
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+              <span className="text-slate-500 block text-[10px] uppercase font-semibold">Environment</span>
+              <span className="font-bold text-slate-900 block">{reading.temperature_c}°C</span>
+              <span className="text-slate-500 text-[10px]">{reading.humidity_pct}% RH</span>
             </div>
           </div>
 
           {/* Occupational Reference Information Box */}
-          <div className="p-4 rounded-xl bg-black/40 border border-figma-border text-xs space-y-2">
-            <div className="flex items-center gap-1.5 text-cyan-400 font-mono font-bold">
-              <Info className="w-3.5 h-3.5" />
+          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-2">
+            <div className="flex items-center gap-1.5 text-slate-800 font-mono font-bold">
+              <Info className="w-3.5 h-3.5 text-sky-600" />
               <span>Occupational Airborne Reference Thresholds</span>
             </div>
-            <div className="grid grid-cols-2 gap-2 text-[10px] font-mono text-figma-textSecondary">
+            <div className="grid grid-cols-2 gap-2 text-[10px] font-mono text-slate-600">
               <div>• NIOSH REL: 10 ppm (10-min ceiling)</div>
               <div>• OSHA General Ceiling: 20 ppm</div>
               <div>• OSHA Exceptional Peak: 50 ppm</div>
-              <div className="text-red-400 font-bold">• NIOSH IDLH: 100 ppm</div>
+              <div className="text-red-700 font-bold">• NIOSH IDLH: 100 ppm</div>
             </div>
-            <p className="text-[10px] font-mono text-figma-textMuted pt-1 leading-relaxed">
+            <p className="text-[10px] font-mono text-slate-500 pt-1 leading-relaxed">
               These reference values describe airborne H₂S concentration and are not directly equivalent to this passive dosimeter's cumulative ppm·min estimate.
             </p>
-            <div className="p-2 rounded bg-amber-950/40 border border-amber-500/30 text-amber-200 text-[10px] font-mono flex items-center gap-2">
-              <AlertOctagon className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            <div className="p-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-mono flex items-center gap-2">
+              <AlertOctagon className="w-3.5 h-3.5 text-amber-600 shrink-0" />
               <span>Do not rely on the rotten-egg odor of H₂S as a safety indicator (rapid olfactory fatigue).</span>
             </div>
           </div>
@@ -168,10 +168,10 @@ export const ReadingDetailModal: React.FC<ReadingDetailModalProps> = ({
           {/* Optical Images / Annotated Overlay */}
           {(reading.annotated_image_path || reading.image_path) && (
             <div className="space-y-2">
-              <span className="text-xs font-mono text-figma-textMuted uppercase tracking-wider block">
+              <span className="text-xs font-mono text-slate-600 uppercase tracking-wider block font-semibold">
                 Normalized Optical Reference Matrix
               </span>
-              <div className="rounded-xl overflow-hidden bg-black border border-figma-border flex items-center justify-center p-2">
+              <div className="rounded-xl overflow-hidden bg-slate-900 border border-slate-300 flex items-center justify-center p-2">
                 <img
                   src={reading.annotated_image_path || reading.image_path || ''}
                   alt="Reading Optical Analysis"
@@ -183,10 +183,10 @@ export const ReadingDetailModal: React.FC<ReadingDetailModalProps> = ({
         </div>
 
         {/* Modal Footer */}
-        <div className="p-4 border-t border-figma-border/70 flex items-center justify-between bg-figma-surface">
+        <div className="p-4 border-t border-slate-200 flex items-center justify-between bg-slate-50/50">
           <button
             onClick={onClose}
-            className="figma-button-secondary py-2 px-4 text-xs font-mono"
+            className="py-2 px-4 rounded-xl bg-white border border-slate-200 text-xs font-mono text-slate-700 hover:bg-slate-50 shadow-xs"
           >
             Close Dossier
           </button>
@@ -196,7 +196,7 @@ export const ReadingDetailModal: React.FC<ReadingDetailModalProps> = ({
                 onClose();
                 onOpenWorkerDossier(reading.worker_id!);
               }}
-              className="figma-button-primary py-2 px-4 text-xs font-bold"
+              className="py-2 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-xs"
             >
               Open Full Worker Dossier →
             </button>

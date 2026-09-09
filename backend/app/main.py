@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from backend.app.api.endpoints import health, cv, readings, workers, calibration, settings, badges, demo, auth
 from backend.app.database.database import engine, Base
 
-# Ensure database tables exist
+# Ensure database tables exist safely on startup
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
@@ -20,10 +20,16 @@ app = FastAPI(
     version="1.0.0-sih2026"
 )
 
-# Enable CORS for Frontend Development Server & Deployed Environments
+# Configure CORS for Local Development and Production Domains
+allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "*")
+if allowed_origins_env == "*":
+    allowed_origins = ["*"]
+else:
+    allowed_origins = [o.strip() for o in allowed_origins_env.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # In production, restrict to verified origins
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -33,11 +39,23 @@ app.add_middleware(
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data")
 DEMO_DIR = os.path.join(DATA_DIR, "demo")
 UPLOADS_DIR = os.path.join(DATA_DIR, "uploads")
+CALIBRATION_DIR = os.path.join(DATA_DIR, "calibration")
 os.makedirs(DEMO_DIR, exist_ok=True)
 os.makedirs(UPLOADS_DIR, exist_ok=True)
+os.makedirs(CALIBRATION_DIR, exist_ok=True)
 
 app.mount("/static/demo", StaticFiles(directory=DEMO_DIR), name="demo_static")
 app.mount("/static/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads_static")
+app.mount("/static/calibration", StaticFiles(directory=CALIBRATION_DIR), name="calibration_static")
+
+# Production Healthcheck Endpoint (No auth required)
+@app.get("/health", tags=["System Health"])
+def root_health():
+    return {
+        "status": "ok",
+        "service": "H2Sentry Exposure Intelligence API",
+        "environment": os.getenv("ENVIRONMENT", "production")
+    }
 
 # Include API Routers
 app.include_router(health.router, prefix="/api", tags=["System Health"])
@@ -58,5 +76,6 @@ def root():
         "sih_code": "SIH26118",
         "organization": "Mangalore Refinery and Petrochemicals Limited (MRPL)",
         "docs_url": "/docs",
-        "health_url": "/api/health"
+        "health_url": "/health"
     }
+

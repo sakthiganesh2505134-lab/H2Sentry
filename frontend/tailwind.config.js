@@ -9,49 +9,49 @@ export default {
     extend: {
       colors: {
         figma: {
-          bg: '#0B0F17',
-          surface: '#111622',
-          card: '#161E2E',
-          cardHover: '#1D273B',
-          border: '#243047',
-          borderLight: '#324260',
-          textPrimary: '#F8FAFC',
-          textSecondary: '#94A3B8',
-          textMuted: '#64748B',
-          accent: '#F59E0B',      // Primary Golden/Amber
-          accentHover: '#D97706',
-          accentGlow: 'rgba(245, 158, 11, 0.25)',
-          safe: '#10B981',        // Emerald Green
-          safeGlow: 'rgba(16, 185, 129, 0.25)',
-          warning: '#F59E0B',     // Amber Warning
-          danger: '#EF4444',      // Red Alert
-          dangerGlow: 'rgba(239, 68, 68, 0.25)',
+          bg: '#F8FAFC',          // Light slate background
+          surface: '#FFFFFF',     // Pure white surface
+          card: '#FFFFFF',        // White cards
+          cardHover: '#F1F5F9',   // Light gray hover
+          border: '#E2E8F0',      // Crisp light-gray border
+          borderLight: '#CBD5E1', // Intermediate border
+          textPrimary: '#0F172A', // Dark charcoal text
+          textSecondary: '#475569', // Slate-600 text
+          textMuted: '#64748B',   // Slate-500 muted text
+          accent: '#0284C7',      // Professional Industrial Cobalt/Teal Accent
+          accentHover: '#0369A1',
+          accentGlow: 'rgba(2, 132, 199, 0.15)',
+          safe: '#059669',        // Occupational emerald
+          safeGlow: 'rgba(5, 150, 105, 0.15)',
+          warning: '#D97706',     // Amber Warning
+          danger: '#DC2626',      // Alert Red
+          dangerGlow: 'rgba(220, 38, 38, 0.15)',
         },
         industrial: {
-          950: '#070A10',
-          900: '#0B0F17',
-          850: '#111622',
-          800: '#161E2E',
-          750: '#1D273B',
-          700: '#243047',
-          600: '#324260',
-          500: '#475E88',
-          400: '#7288B0',
-          300: '#A4B6D4',
-          200: '#CBD7EC',
-          100: '#E8EFFB',
+          950: '#0F172A',
+          900: '#1E293B',
+          850: '#334155',
+          800: '#475569',
+          750: '#64748B',
+          700: '#94A3B8',
+          600: '#CBD5E1',
+          500: '#E2E8F0',
+          400: '#F1F5F9',
+          300: '#F8FAFC',
+          200: '#FFFFFF',
+          100: '#FFFFFF',
         },
         safety: {
-          safe: '#10B981',
-          safeGlow: '#059669',
-          caution: '#F59E0B',
-          cautionGlow: '#D97706',
-          warning: '#F97316',
-          warningGlow: '#EA580C',
-          critical: '#EF4444',
-          criticalGlow: '#DC2626',
-          cyan: '#0EA5E9',
-          cyanGlow: '#0284C7',
+          safe: '#059669',
+          safeGlow: 'rgba(5, 150, 105, 0.15)',
+          caution: '#D97706',
+          cautionGlow: 'rgba(217, 119, 6, 0.15)',
+          warning: '#EA580C',
+          warningGlow: 'rgba(234, 88, 12, 0.15)',
+          critical: '#DC2626',
+          criticalGlow: 'rgba(220, 38, 38, 0.15)',
+          cyan: '#0284C7',
+          cyanGlow: 'rgba(2, 132, 199, 0.15)',
         }
       },
       fontFamily: {
@@ -59,15 +59,13 @@ export default {
         sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
       },
       boxShadow: {
-        'glow-amber': '0 0 25px -5px rgba(245, 158, 11, 0.35)',
-        'glow-green': '0 0 25px -5px rgba(16, 185, 129, 0.35)',
-        'glow-red': '0 0 25px -5px rgba(239, 68, 68, 0.35)',
-        'glow-cyan': '0 0 25px -5px rgba(14, 165, 233, 0.35)',
+        'card': '0 1px 3px 0 rgba(0, 0, 0, 0.06), 0 1px 2px 0 rgba(0, 0, 0, 0.04)',
+        'card-hover': '0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04)',
+        'elevation': '0 10px 15px -3px rgba(0, 0, 0, 0.07), 0 4px 6px -2px rgba(0, 0, 0, 0.03)',
       },
       animation: {
         'scan-line': 'scan 2.5s ease-in-out infinite',
         'pulse-subtle': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-        'ping-slow': 'ping 2s cubic-bezier(0, 0, 0.2, 1) infinite',
       },
       keyframes: {
         scan: {

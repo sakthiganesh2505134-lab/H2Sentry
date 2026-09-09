@@ -3,7 +3,9 @@ import {
   Plus, 
   Wrench, 
   Check, 
-  Bell 
+  X, 
+  Sliders, 
+  Watch 
 } from 'lucide-react';
 import type { SystemSettings } from '../types';
 import { fetchSettings, updateSettings } from '../services/api';
@@ -24,9 +26,9 @@ export const SettingsView: React.FC = () => {
 
   // Wristband Hardware Fleet Register state
   const [hardwareFleet, setHardwareFleet] = useState([
-    { id: '#247', operator: 'James Rodriguez', lastCalib: 'Oct 12, 2026', status: 'ACTIVE' },
-    { id: '#512', operator: 'Sarah Jenkins', lastCalib: 'Oct 24, 2026', status: 'ACTIVE' },
-    { id: '#389', operator: 'None — In Storage', lastCalib: 'Aug 15, 2025', status: 'CALIBRATION DUE' },
+    { id: '#247', operator: 'Rajesh Kumar', lastCalib: '08 Sep 2026', status: 'ACTIVE' },
+    { id: '#512', operator: 'Ananya Sharma', lastCalib: '08 Sep 2026', status: 'ACTIVE' },
+    { id: '#389', operator: 'Manoj Mendon', lastCalib: '15 Aug 2025', status: 'CALIBRATION DUE' },
   ]);
 
   const [newDeviceNumber, setNewDeviceNumber] = useState('');
@@ -100,24 +102,21 @@ export const SettingsView: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fadeIn pb-12">
-      {/* Top Header matching Figma calibration-admin */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-figma-border/60">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-slate-200">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight font-sans">
-            System Administration
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight font-sans">
+            Safety Administration & Thresholds
           </h1>
-          <p className="text-xs sm:text-sm text-figma-textSecondary mt-0.5 font-sans">
-            Hardware calibration fleet status and software threshold registers.
+          <p className="text-xs sm:text-sm text-slate-500 mt-0.5 font-sans">
+            Hardware dosimeter fleet register and airborne exposure action level configuration.
           </p>
         </div>
 
         <div className="flex items-center space-x-3">
-          <span className="px-3.5 py-1.5 rounded-full text-xs font-mono font-bold tracking-wider uppercase bg-figma-surface border border-figma-border text-figma-accent shadow-sm">
-            REFINERY DAY SHIFT
+          <span className="px-3.5 py-1.5 rounded-full text-xs font-mono font-bold tracking-wider uppercase bg-white border border-slate-200 text-slate-700 shadow-xs">
+            Refinery Day Shift
           </span>
-          <button className="relative p-2 rounded-xl bg-figma-surface hover:bg-figma-card border border-figma-border text-figma-textSecondary hover:text-white transition-colors">
-            <Bell className="w-4 h-4" />
-          </button>
         </div>
       </div>
 
@@ -125,17 +124,18 @@ export const SettingsView: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column: Fleet Register & Maintenance Queue (7 cols) */}
         <div className="lg:col-span-7 space-y-6">
-          {/* Wristband Dosimeter Register Card matching Figma */}
-          <div className="figma-card p-5 space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-base font-bold text-white font-sans">
-                Wristband Dosimeter Register
+          {/* Wristband Dosimeter Register Card */}
+          <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <h2 className="text-base font-bold text-slate-900 font-sans flex items-center gap-2">
+                <Watch className="w-4 h-4 text-sky-600" />
+                Wristband Dosimeter Fleet Register
               </h2>
               <button
                 onClick={() => setShowAddHardwareModal(true)}
-                className="figma-button-secondary py-1.5 px-3 text-xs font-semibold space-x-1.5"
+                className="py-1.5 px-3 rounded-lg bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold flex items-center space-x-1.5 shadow-xs transition"
               >
-                <Plus className="w-3.5 h-3.5 text-figma-accent" />
+                <Plus className="w-3.5 h-3.5 text-sky-600" />
                 <span>Add Hardware</span>
               </button>
             </div>
@@ -143,35 +143,33 @@ export const SettingsView: React.FC = () => {
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs font-sans">
                 <thead>
-                  <tr className="border-b border-figma-border text-[11px] font-mono text-figma-textMuted uppercase tracking-wider">
-                    <th className="pb-3 font-semibold">DEVICE ID</th>
-                    <th className="pb-3 font-semibold">ASSIGNED OPERATOR</th>
-                    <th className="pb-3 font-semibold">LAST CALIBRATION</th>
-                    <th className="pb-3 font-semibold text-right">STATUS</th>
+                  <tr className="border-b border-slate-200 text-[11px] font-mono text-slate-500 uppercase tracking-wider bg-slate-50/50">
+                    <th className="py-2.5 px-3 font-semibold">DEVICE ID</th>
+                    <th className="py-2.5 px-3 font-semibold">ASSIGNED OPERATOR</th>
+                    <th className="py-2.5 px-3 font-semibold">LAST CALIBRATION</th>
+                    <th className="py-2.5 px-3 font-semibold text-right">STATUS</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-figma-border/40">
+                <tbody className="divide-y divide-slate-100">
                   {hardwareFleet.map((dev) => (
-                    <tr key={dev.id} className="hover:bg-figma-card/80 transition-colors">
-                      <td className="py-3.5 font-mono text-white font-bold">
+                    <tr key={dev.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="py-3 px-3 font-mono text-slate-900 font-bold">
                         {dev.id}
                       </td>
-                      <td className="py-3.5 text-figma-textSecondary">
+                      <td className="py-3 px-3 text-slate-700 font-sans">
                         {dev.operator}
                       </td>
-                      <td className="py-3.5 font-mono text-figma-textMuted text-[11px]">
+                      <td className="py-3 px-3 font-mono text-slate-500 text-[11px]">
                         {dev.lastCalib}
                       </td>
-                      <td className="py-3.5 text-right">
+                      <td className="py-3 px-3 text-right">
                         {dev.status === 'ACTIVE' ? (
-                          <span className="inline-flex items-center space-x-1.5 text-xs font-bold font-mono text-figma-safe">
-                            <span className="w-2 h-2 rounded-full bg-figma-safe" />
-                            <span>ACTIVE</span>
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            ACTIVE
                           </span>
                         ) : (
-                          <span className="inline-flex items-center space-x-1.5 text-xs font-bold font-mono text-figma-warning">
-                            <span className="w-2 h-2 rounded-full bg-figma-warning" />
-                            <span>CALIBRATION DUE</span>
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                            CALIBRATION DUE
                           </span>
                         )}
                       </td>
@@ -182,23 +180,23 @@ export const SettingsView: React.FC = () => {
             </div>
           </div>
 
-          {/* Scheduled Hardware Maintenance Queue matching Figma */}
-          <div className="figma-card p-5 space-y-3">
-            <h2 className="text-base font-bold text-white font-sans">
+          {/* Scheduled Hardware Maintenance Queue */}
+          <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs space-y-3">
+            <h2 className="text-base font-bold text-slate-900 font-sans">
               Scheduled Hardware Maintenance Queue
             </h2>
 
-            <div className="p-4 rounded-xl bg-amber-950/25 border border-amber-500/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg shadow-amber-500/5">
+            <div className="p-4 rounded-xl bg-amber-50/70 border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-start space-x-3">
-                <div className="p-2 rounded-lg bg-amber-500/20 text-figma-warning shrink-0 mt-0.5">
+                <div className="p-2 rounded-lg bg-amber-100 text-amber-700 shrink-0 mt-0.5">
                   <Wrench className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-white font-sans">
-                    Dosimeter #109
+                  <h3 className="text-sm font-bold text-slate-900 font-sans">
+                    Dosimeter #389 (Manoj Mendon)
                   </h3>
-                  <p className="text-xs text-figma-textSecondary mt-0.5 max-w-md">
-                    Colorimetric element degradation threshold exceeded (90 days since last exposure cycle)
+                  <p className="text-xs text-slate-600 mt-0.5 max-w-md">
+                    Colorimetric element shelf validity expired (&gt;90 days since manufacture). Requires badge replacement.
                   </p>
                 </div>
               </div>
@@ -208,26 +206,32 @@ export const SettingsView: React.FC = () => {
                   setRecalibratedSuccess(true);
                   setTimeout(() => setRecalibratedSuccess(false), 2500);
                 }}
-                className="figma-button-primary py-2 px-4 text-xs font-bold shrink-0 self-end sm:self-center"
+                className="py-2 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shrink-0 self-end sm:self-center shadow-xs transition"
               >
-                {recalibratedSuccess ? 'Recalibrated ✓' : 'Recalibrate'}
+                {recalibratedSuccess ? 'Queued ✓' : 'Queue Replacement'}
               </button>
             </div>
           </div>
         </div>
 
-        {/* Right Column: Shift Threshold Tuning (5 cols) matching Figma */}
-        <div className="lg:col-span-5 figma-card p-5 space-y-5">
-          <h2 className="text-base font-bold text-white font-sans">
-            Shift Threshold Tuning
-          </h2>
+        {/* Right Column: Shift Threshold Tuning (5 cols) */}
+        <div className="lg:col-span-5 bg-white rounded-2xl p-5 border border-slate-200 shadow-xs space-y-5">
+          <div className="pb-2 border-b border-slate-100">
+            <h2 className="text-base font-bold text-slate-900 font-sans flex items-center gap-2">
+              <Sliders className="w-4 h-4 text-sky-600" />
+              Exposure Action Levels & Limits
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              MRPL occupational health action levels for shift-long exposure dosimetry.
+            </p>
+          </div>
 
           <div className="space-y-4">
             {/* Input 1: 8-HR TWA Caution */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold text-white">
-                  8-HR TWA Caution Threshold
+                <label className="text-xs font-semibold text-slate-900">
+                  8-HR TWA Review Threshold
                 </label>
                 <div className="flex items-center space-x-1">
                   <input
@@ -235,21 +239,21 @@ export const SettingsView: React.FC = () => {
                     step="0.5"
                     value={cautionThreshold}
                     onChange={(e) => setCautionThreshold(parseFloat(e.target.value) || 0)}
-                    className="w-16 py-1 px-2 rounded bg-figma-card border border-figma-border text-right font-mono text-xs text-figma-accent font-bold"
+                    className="w-16 py-1 px-2 rounded-lg bg-slate-50 border border-slate-200 text-right font-mono text-xs text-slate-900 font-bold focus:outline-none focus:border-sky-500"
                   />
-                  <span className="text-xs font-mono text-figma-textMuted">ppm</span>
+                  <span className="text-xs font-mono text-slate-500">ppm</span>
                 </div>
               </div>
-              <p className="text-[11px] text-figma-textMuted leading-relaxed">
-                Triggers warning alerts on worker dashboard page and triggers average exposure calculations.
+              <p className="text-[11px] text-slate-500 leading-relaxed">
+                Triggers yellow review recommended indicator on worker dashboard (Default: 5.0 ppm).
               </p>
             </div>
 
             {/* Input 2: STEL Absolute Safety Limit */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold text-white">
-                  STEL Absolute Safety Limit
+                <label className="text-xs font-semibold text-slate-900">
+                  Action Level Ceiling (STEL)
                 </label>
                 <div className="flex items-center space-x-1">
                   <input
@@ -257,21 +261,21 @@ export const SettingsView: React.FC = () => {
                     step="0.5"
                     value={stelLimit}
                     onChange={(e) => setStelLimit(parseFloat(e.target.value) || 0)}
-                    className="w-16 py-1 px-2 rounded bg-figma-card border border-figma-border text-right font-mono text-xs text-figma-warning font-bold"
+                    className="w-16 py-1 px-2 rounded-lg bg-slate-50 border border-slate-200 text-right font-mono text-xs text-amber-700 font-bold focus:outline-none focus:border-sky-500"
                   />
-                  <span className="text-xs font-mono text-figma-textMuted">ppm</span>
+                  <span className="text-xs font-mono text-slate-500">ppm</span>
                 </div>
               </div>
-              <p className="text-[11px] text-figma-textMuted leading-relaxed">
-                Instant site warning alert pushed to safety officer monitor for field checks.
+              <p className="text-[11px] text-slate-500 leading-relaxed">
+                Mandatory field check dispatched to safety officer console (Default: 10.0 ppm).
               </p>
             </div>
 
             {/* Input 3: IDLH Critical Gas Alert */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold text-white">
-                  IDLH Critical Gas Alert
+                <label className="text-xs font-semibold text-slate-900">
+                  Critical Emergency Action Threshold
                 </label>
                 <div className="flex items-center space-x-1">
                   <input
@@ -279,26 +283,26 @@ export const SettingsView: React.FC = () => {
                     step="1.0"
                     value={idlhAlert}
                     onChange={(e) => setIdlhAlert(parseFloat(e.target.value) || 0)}
-                    className="w-16 py-1 px-2 rounded bg-figma-card border border-figma-border text-right font-mono text-xs text-figma-danger font-bold"
+                    className="w-16 py-1 px-2 rounded-lg bg-slate-50 border border-slate-200 text-right font-mono text-xs text-red-700 font-bold focus:outline-none focus:border-sky-500"
                   />
-                  <span className="text-xs font-mono text-figma-textMuted">ppm</span>
+                  <span className="text-xs font-mono text-slate-500">ppm</span>
                 </div>
               </div>
-              <p className="text-[11px] text-figma-textMuted leading-relaxed">
-                Direct immediate danger to life & health threshold limit.
+              <p className="text-[11px] text-slate-500 leading-relaxed">
+                Emergency evacuation alert trigger (Default: 20.0 ppm).
               </p>
             </div>
 
             {/* Input 4: Maintenance Intervals */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold text-white">
-                  Maintenance Intervals
+                <label className="text-xs font-semibold text-slate-900">
+                  Dosimeter Shelf Life Check
                 </label>
                 <select
                   value={maintenanceInterval}
                   onChange={(e) => setMaintenanceInterval(e.target.value)}
-                  className="py-1 px-2.5 rounded bg-figma-card border border-figma-border font-mono text-xs text-white"
+                  className="py-1 px-2.5 rounded-lg bg-slate-50 border border-slate-200 font-mono text-xs text-slate-900 focus:outline-none focus:border-sky-500"
                 >
                   <option value="Every 30 Days">Every 30 Days</option>
                   <option value="Every 60 Days">Every 60 Days</option>
@@ -306,17 +310,17 @@ export const SettingsView: React.FC = () => {
                   <option value="Every 180 Days">Every 180 Days</option>
                 </select>
               </div>
-              <p className="text-[11px] text-figma-textMuted leading-relaxed">
-                Automatic recalibration warnings.
+              <p className="text-[11px] text-slate-500 leading-relaxed">
+                Automatic shelf expiration detection for chemical reaction strips.
               </p>
             </div>
           </div>
 
-          {/* Action Buttons matching Figma */}
-          <div className="flex items-center justify-end space-x-3 pt-4 border-t border-figma-border/50">
+          {/* Action Buttons */}
+          <div className="flex items-center justify-end space-x-3 pt-4 border-t border-slate-100">
             <button
               onClick={handleResetDefaults}
-              className="text-xs font-mono text-figma-textMuted hover:text-white px-3 py-2"
+              className="text-xs font-mono text-slate-500 hover:text-slate-900 px-3 py-2 font-semibold"
             >
               Reset Defaults
             </button>
@@ -324,11 +328,11 @@ export const SettingsView: React.FC = () => {
             <button
               onClick={handleApplyRules}
               disabled={saving}
-              className="figma-button-primary py-2 px-4 text-xs font-bold space-x-1.5"
+              className="py-2 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center space-x-1.5 shadow-xs transition"
             >
               {savedSuccess ? (
                 <>
-                  <Check className="w-3.5 h-3.5 stroke-[3]" />
+                  <Check className="w-3.5 h-3.5 stroke-[3] text-emerald-400" />
                   <span>Rules Applied!</span>
                 </>
               ) : saving ? (
@@ -343,14 +347,24 @@ export const SettingsView: React.FC = () => {
 
       {/* Add Hardware Modal */}
       {showAddHardwareModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="figma-card max-w-md w-full p-6 space-y-4">
-            <h3 className="text-base font-bold text-white font-sans">
-              Register New Wristband Dosimeter
-            </h3>
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-6 shadow-xl animate-fadeIn space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+              <h3 className="text-base font-bold text-slate-900 font-sans flex items-center gap-2">
+                <Watch className="w-4 h-4 text-sky-600" />
+                Register New Wristband Dosimeter
+              </h3>
+              <button
+                onClick={() => setShowAddHardwareModal(false)}
+                className="text-slate-400 hover:text-slate-700"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
             <form onSubmit={handleAddHardware} className="space-y-3">
               <div>
-                <label className="text-xs font-mono text-figma-textMuted block mb-1">
+                <label className="text-xs text-slate-600 block mb-1 font-semibold">
                   Device Hardware ID
                 </label>
                 <input
@@ -358,21 +372,21 @@ export const SettingsView: React.FC = () => {
                   placeholder="#682"
                   value={newDeviceNumber}
                   onChange={(e) => setNewDeviceNumber(e.target.value)}
-                  className="w-full p-2.5 rounded-lg bg-figma-card border border-figma-border text-white text-xs font-mono"
+                  className="w-full px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 text-xs font-mono focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
                   required
                 />
               </div>
 
               <div>
-                <label className="text-xs font-mono text-figma-textMuted block mb-1">
+                <label className="text-xs text-slate-600 block mb-1 font-semibold">
                   Assigned Operator (Optional)
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. Michael Chang"
+                  placeholder="e.g. Rajesh Kumar"
                   value={newDeviceOperator}
                   onChange={(e) => setNewDeviceOperator(e.target.value)}
-                  className="w-full p-2.5 rounded-lg bg-figma-card border border-figma-border text-white text-xs"
+                  className="w-full px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 text-xs font-sans focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
                 />
               </div>
 
@@ -380,13 +394,13 @@ export const SettingsView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowAddHardwareModal(false)}
-                  className="figma-button-secondary py-2 px-3 text-xs"
+                  className="px-4 py-2 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-semibold"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="figma-button-primary py-2 px-4 text-xs font-bold"
+                  className="px-5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-xs"
                 >
                   Register Device
                 </button>

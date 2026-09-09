@@ -1,0 +1,68 @@
+{
+  "model_name": "H2Sentry Synthetic Colorimetric Exposure Calibration Regressor",
+  "selected_algorithm": "GradientBoostingRegressor",
+  "feature_list": [
+    "cal_r",
+    "cal_g",
+    "cal_b",
+    "L_star",
+    "a_star",
+    "b_star",
+    "hue",
+    "sat",
+    "val",
+    "delta_e",
+    "uniformity_score",
+    "noise_std",
+    "temperature_c",
+    "humidity_pct",
+    "strip_age_days"
+  ],
+  "target_variable": "dose_ppm_min",
+  "target_unit": "ppm\u00b7min",
+  "dataset_version": "v1.0-synthetic-6000",
+  "dataset_size_total": 5181,
+  "train_samples": 3441,
+  "validation_samples": 875,
+  "test_samples": 865,
+  "random_seed": 42,
+  "training_date": "2026-09-08T17:59:51.034900+00:00",
+  "synthetic_disclaimer": "ALL METRICS ARE SYNTHETIC SOFTWARE-VALIDATION RESULTS. NOT LABORATORY H2S CALIBRATION.",
+  "calibration_version": "CAL-v1.0-ml-gbr",
+  "validation_metrics": {
+    "mae_ppm_min": 20.72,
+    "rmse_ppm_min": 39.34,
+    "r2_score": 0.9948
+  },
+  "test_metrics": {
+    "mae_ppm_min": 21.87,
+    "rmse_ppm_min": 37.23,
+    "r2_score": 0.9954
+  },
+  "candidate_models_comparison": {
+    "GradientBoostingRegressor": {
+      "train_mae": 10.14,
+      "train_rmse": 14.78,
+      "train_r2": 0.9993,
+      "val_mae": 20.72,
+      "val_rmse": 39.34,
+      "val_r2": 0.9948
+    },
+    "RandomForestRegressor": {
+      "train_mae": 9.39,
+      "train_rmse": 16.81,
+      "train_r2": 0.9991,
+      "val_mae": 21.25,
+      "val_rmse": 42.48,
+      "val_r2": 0.9939
+    },
+    "Ridge": {
+      "train_mae": 52.11,
+      "train_rmse": 74.99,
+      "train_r2": 0.9827,
+      "val_mae": 52.17,
+      "val_rmse": 76.47,
+      "val_r2": 0.9802
+    }
+  }
+}

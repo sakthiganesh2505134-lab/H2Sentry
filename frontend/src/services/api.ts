@@ -11,6 +11,7 @@ import type {
   DashboardStats,
   Worker,
   WorkerDetail,
+  WorkerSummary,
   WorkerCreatePayload,
   WorkerUpdatePayload,
   Badge,
@@ -267,9 +268,16 @@ export async function deleteWorker(workerId: string): Promise<{ success: boolean
   return res.json();
 }
 
-export async function fetchWorkerDetail(workerId: string): Promise<WorkerDetail> {
-  const res = await fetch(`${API_BASE}/workers/${workerId}`);
+export async function fetchWorkerDetail(workerId: string, days?: number): Promise<WorkerDetail> {
+  const query = days ? `?days=${days}` : '';
+  const res = await fetch(`${API_BASE}/workers/${workerId}${query}`);
   if (!res.ok) throw new Error(`Failed to load worker detail: ${res.statusText}`);
+  return res.json();
+}
+
+export async function fetchWorkerSummary(workerId: string, days: number = 30): Promise<WorkerSummary> {
+  const res = await fetch(`${API_BASE}/workers/${workerId}/summary?days=${days}`);
+  if (!res.ok) throw new Error(`Failed to load worker summary: ${res.statusText}`);
   return res.json();
 }
 

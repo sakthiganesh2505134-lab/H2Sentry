@@ -33,28 +33,28 @@ export const LandingView: React.FC<LandingViewProps> = ({
       role: "Identity Layer (WHO / WHICH BADGE)",
       description: "Encodes only the unique Badge ID (e.g. H2S-BDG-2026-000381). Backend resolves the worker, employee ID, plant unit, shift, and issue/expiry timestamps without exposing sensitive worker PII inside the QR.",
       tag: "Identity Bridge",
-      color: "border-cyan-400 text-cyan-400"
+      color: "border-sky-300 bg-sky-50 text-sky-900"
     },
     {
       title: "2. Printed Reference Colour Scale",
       role: "Lighting Normalization Layer (OPTICAL CORRECTION)",
-      description: "Seven calibrated reference patches (0, 50, 100, 200, 400, 800, 1600 ppm·min) normalize for ambient lux, white balance shifts, and smartphone sensor variations before measuring chemical reaction.",
+      description: "Nine calibrated reference patches normalize for ambient lux, white balance shifts, and smartphone sensor variations before measuring chemical reaction.",
       tag: "Lighting Calibration",
-      color: "border-sky-400 text-sky-400"
+      color: "border-sky-300 bg-sky-50 text-sky-900"
     },
     {
       title: "3. Long Rectangular Reaction Strip",
       role: "Exposure Sensing Layer (WHAT EXPOSURE OCCURRED)",
       description: "Porous metal-salt composite matrix undergoes irreversible proportional darkening upon passive diffusion of H2S gas over time. The chemical response records cumulative exposure dose (ppm·min).",
       tag: "Passive Dosimetry",
-      color: "border-amber-400 text-amber-400"
+      color: "border-amber-300 bg-amber-50 text-amber-900"
     },
     {
       title: "4. Expiry / Shelf-Life Indicator",
       role: "Integrity Layer (IS BADGE STILL VALID)",
       description: "Separate sealed chemical indicator transitions from green (valid) to amber (expiring soon) to red (expired), ensuring stale or oxidized badges are flagged before recording occupational dose.",
       tag: "Reagent Validity",
-      color: "border-emerald-400 text-emerald-400"
+      color: "border-emerald-300 bg-emerald-50 text-emerald-900"
     }
   ];
 
@@ -99,22 +99,22 @@ export const LandingView: React.FC<LandingViewProps> = ({
   ];
 
   return (
-    <div className="w-full min-h-screen bg-figma-bg text-figma-textPrimary select-none">
+    <div className="w-full min-h-screen bg-slate-50 text-slate-900 select-none">
       {/* Top Brand Navigation Bar */}
-      <header className="sticky top-0 z-40 w-full backdrop-blur-md bg-figma-bg/85 border-b border-figma-border/60 px-6 py-4">
+      <header className="sticky top-0 z-40 w-full backdrop-blur-md bg-white/90 border-b border-slate-200 px-6 py-4 shadow-xs">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
-              <ShieldCheck className="w-5 h-5 text-black stroke-[2.5]" />
+            <div className="w-9 h-9 rounded-xl bg-slate-900 flex items-center justify-center shadow-md shadow-slate-900/10">
+              <ShieldCheck className="w-5 h-5 text-sky-400 stroke-[2.5]" />
             </div>
             <div>
-              <div className="text-lg font-black tracking-wider text-white font-mono flex items-center gap-2">
+              <div className="text-lg font-black tracking-tight text-slate-900 font-mono flex items-center gap-2">
                 H2SENTRY
-                <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded-full bg-cyan-400/15 text-cyan-300 border border-cyan-400/30">
+                <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 border border-sky-200">
                   CAL-v0.1-demo
                 </span>
               </div>
-              <p className="text-[11px] text-figma-textMuted tracking-wider">
+              <p className="text-[11px] text-slate-500 tracking-wider">
                 PASSIVE EXPOSURE INTELLIGENCE
               </p>
             </div>
@@ -123,16 +123,16 @@ export const LandingView: React.FC<LandingViewProps> = ({
           <div className="flex items-center gap-3">
             <button
               onClick={onLaunchSupervisor}
-              className="hidden sm:inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-figma-card/80 hover:bg-figma-cardHover border border-figma-border transition text-figma-textSecondary hover:text-white"
+              className="hidden sm:inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-white hover:bg-slate-50 border border-slate-200 transition text-slate-700 shadow-xs"
             >
-              <Database className="w-3.5 h-3.5" />
+              <Database className="w-3.5 h-3.5 text-slate-500" />
               Supervisor Portal
             </button>
             <button
               onClick={onLaunchWorker}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-cyan-400 text-black hover:bg-cyan-300 shadow-md shadow-cyan-500/25 transition active:scale-95 uppercase tracking-wider"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-slate-900 text-white hover:bg-slate-800 shadow-md shadow-slate-900/10 transition active:scale-95 uppercase tracking-wider"
             >
-              <Camera className="w-4 h-4" />
+              <Camera className="w-4 h-4 text-sky-400" />
               Try Mobile Worker App
             </button>
           </div>
@@ -140,30 +140,27 @@ export const LandingView: React.FC<LandingViewProps> = ({
       </header>
 
       {/* Hero Section */}
-      <section className="relative px-6 pt-16 pb-20 max-w-7xl mx-auto overflow-hidden">
-        <div className="absolute top-10 left-1/2 -translate-x-1/2 w-[600px] h-[350px] bg-cyan-500/10 blur-[130px] rounded-full pointer-events-none" />
-        <div className="absolute top-40 right-10 w-[300px] h-[300px] bg-blue-600/10 blur-[100px] rounded-full pointer-events-none" />
-
+      <section className="relative px-6 pt-14 pb-16 max-w-7xl mx-auto">
         <div className="text-center max-w-3xl mx-auto relative z-10">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-figma-card border border-figma-border/80 text-xs font-medium text-cyan-400 mb-6 shadow-inner font-mono">
-            <Sparkles className="w-3.5 h-3.5" />
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-slate-200 text-xs font-medium text-sky-700 mb-6 shadow-xs font-mono">
+            <Sparkles className="w-3.5 h-3.5 text-sky-600" />
             <span>Industrial Cumulative Exposure Dosimetry</span>
           </div>
 
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.1] mb-6 font-mono">
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight leading-[1.15] mb-6 font-mono">
             Passive Chemical Sensing Meets Optical Computer Vision
           </h1>
 
-          <p className="text-base sm:text-lg text-figma-textSecondary leading-relaxed mb-8">
-            <span className="text-white font-medium">H2Sentry</span> is a passive cumulative H₂S exposure dosimeter system that combines a disposable colorimetric badge with smartphone computer vision to estimate cumulative exposure dose (<strong className="text-white">ppm·min</strong>) and digitally record the result against the worker, badge, and shift.
+          <p className="text-base sm:text-lg text-slate-600 leading-relaxed mb-8">
+            <span className="text-slate-900 font-semibold">H2Sentry</span> is a passive cumulative H₂S exposure dosimeter system that combines a disposable colorimetric badge with smartphone computer vision to estimate cumulative exposure dose (<strong className="text-slate-900">ppm·min</strong>) and digitally record the result against the worker, badge, and shift.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <button
               onClick={onLaunchWorker}
-              className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-cyan-400 text-black font-bold text-sm hover:bg-cyan-300 shadow-xl shadow-cyan-500/25 transition transform active:scale-95 flex items-center justify-center gap-3 uppercase tracking-wider"
+              className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-slate-900 text-white font-bold text-sm hover:bg-slate-800 shadow-md shadow-slate-900/10 transition transform active:scale-95 flex items-center justify-center gap-2.5 uppercase tracking-wider"
             >
-              <Camera className="w-5 h-5 stroke-[2.5]" />
+              <Camera className="w-4 h-4 text-sky-400 stroke-[2.5]" />
               Try Mobile Worker Scan
             </button>
 
@@ -172,16 +169,16 @@ export const LandingView: React.FC<LandingViewProps> = ({
                 const el = document.getElementById('how-it-works');
                 el?.scrollIntoView({ behavior: 'smooth' });
               }}
-              className="w-full sm:w-auto px-7 py-4 rounded-2xl bg-figma-card hover:bg-figma-cardHover border border-figma-border text-sm font-semibold text-white transition flex items-center justify-center gap-2"
+              className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-sm font-semibold text-slate-700 transition flex items-center justify-center gap-2 shadow-xs"
             >
               How It Works
-              <ArrowRight className="w-4 h-4 text-figma-textMuted" />
+              <ArrowRight className="w-4 h-4 text-slate-400" />
             </button>
           </div>
 
           {/* Quick Benchmark Presets Pill Bar */}
-          <div className="mt-10 pt-6 border-t border-figma-border/50 text-left">
-            <p className="text-xs font-mono uppercase tracking-wider text-figma-textMuted mb-3 text-center">
+          <div className="mt-10 pt-6 border-t border-slate-200 text-left">
+            <p className="text-xs font-mono uppercase tracking-wider text-slate-500 mb-3 text-center font-semibold">
               1-Click Deterministic Benchmark Scenarios (Software Test Data):
             </p>
             <div className="flex flex-wrap justify-center gap-2">
@@ -197,7 +194,7 @@ export const LandingView: React.FC<LandingViewProps> = ({
                 <button
                   key={p.id}
                   onClick={() => onLaunchDemoScenario(p.id)}
-                  className="text-xs px-3 py-1.5 rounded-lg bg-figma-card hover:bg-cyan-400/15 hover:border-cyan-400/40 border border-figma-border text-figma-textSecondary hover:text-white transition font-mono"
+                  className="text-xs px-3 py-1.5 rounded-lg bg-white hover:bg-sky-50 hover:border-sky-300 border border-slate-200 text-slate-700 hover:text-sky-900 transition font-mono shadow-xs"
                 >
                   {p.label}
                 </button>
@@ -208,11 +205,11 @@ export const LandingView: React.FC<LandingViewProps> = ({
       </section>
 
       {/* 5-Step Visual Workflow */}
-      <section id="how-it-works" className="px-6 py-16 max-w-7xl mx-auto border-t border-figma-border/60">
-        <div className="text-center max-w-2xl mx-auto mb-12">
-          <p className="text-xs font-mono uppercase tracking-widest text-cyan-400 mb-2">Core Workflow</p>
-          <h2 className="text-3xl font-black text-white font-mono uppercase">5-Step Dosimetry Journey</h2>
-          <p className="text-sm text-figma-textSecondary mt-2">
+      <section id="how-it-works" className="px-6 py-14 max-w-7xl mx-auto border-t border-slate-200">
+        <div className="text-center max-w-2xl mx-auto mb-10">
+          <p className="text-xs font-mono uppercase tracking-widest text-sky-700 mb-1 font-bold">Core Workflow</p>
+          <h2 className="text-3xl font-black text-slate-900 font-sans tracking-tight">5-Step Dosimetry Journey</h2>
+          <p className="text-sm text-slate-500 mt-1">
             From physical wear to digital occupational record
           </p>
         </div>
@@ -221,16 +218,16 @@ export const LandingView: React.FC<LandingViewProps> = ({
           {workflowSteps.map((step, idx) => (
             <div 
               key={idx} 
-              className="p-6 rounded-2xl bg-figma-card border border-figma-border hover:border-cyan-400/40 transition relative group"
+              className="p-5 rounded-2xl bg-white border border-slate-200 hover:border-sky-300 transition relative shadow-xs group"
             >
-              <div className="text-xs font-mono text-cyan-400 font-black tracking-widest mb-3">
+              <div className="text-xs font-mono text-sky-700 font-black tracking-widest mb-2">
                 {step.num}
               </div>
-              <h3 className="text-base font-bold text-white mb-2 font-mono flex items-center justify-between">
+              <h3 className="text-base font-bold text-slate-900 mb-1.5 font-sans flex items-center justify-between">
                 {step.title}
-                {idx < 4 && <ArrowRight className="w-3.5 h-3.5 text-figma-textMuted hidden lg:block group-hover:translate-x-1 transition" />}
+                {idx < 4 && <ArrowRight className="w-3.5 h-3.5 text-slate-300 hidden lg:block group-hover:translate-x-1 transition" />}
               </h3>
-              <p className="text-xs text-figma-textSecondary leading-relaxed">
+              <p className="text-xs text-slate-600 leading-relaxed">
                 {step.desc}
               </p>
             </div>
@@ -239,43 +236,43 @@ export const LandingView: React.FC<LandingViewProps> = ({
       </section>
 
       {/* Physical Dosimeter Visual Schematic */}
-      <section className="px-6 py-16 max-w-7xl mx-auto border-t border-figma-border/60">
-        <div className="text-center max-w-2xl mx-auto mb-12">
-          <p className="text-xs font-mono uppercase tracking-widest text-cyan-400 mb-2">Hardware Architecture</p>
-          <h2 className="text-3xl font-black text-white font-mono uppercase">Physical Dosimeter Layout</h2>
-          <p className="text-sm text-figma-textSecondary mt-2">
+      <section className="px-6 py-14 max-w-7xl mx-auto border-t border-slate-200">
+        <div className="text-center max-w-2xl mx-auto mb-10">
+          <p className="text-xs font-mono uppercase tracking-widest text-sky-700 mb-1 font-bold">Hardware Architecture</p>
+          <h2 className="text-3xl font-black text-slate-900 font-sans tracking-tight">Physical Dosimeter Layout</h2>
+          <p className="text-sm text-slate-500 mt-1">
             The physical card integrates 4 distinct operational zones
           </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
           {/* Interactive Badge Concept Render */}
-          <div className="lg:col-span-6 p-6 rounded-3xl bg-figma-card border border-figma-border relative overflow-hidden">
-            <div className="p-4 rounded-2xl bg-[#1e2329] border border-gray-700 font-sans shadow-2xl space-y-3">
+          <div className="lg:col-span-6 p-6 rounded-3xl bg-white border border-slate-200 relative overflow-hidden shadow-xs">
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 font-sans shadow-xs space-y-3">
               {/* Badge Header: QR / Badge ID */}
               <div 
                 onClick={() => setActiveZone(0)}
-                className={`p-2.5 rounded-xl border transition cursor-pointer flex items-center justify-between ${activeZone === 0 ? 'border-cyan-400 bg-cyan-950/30' : 'border-gray-700 bg-gray-900/50'}`}
+                className={`p-2.5 rounded-xl border transition cursor-pointer flex items-center justify-between ${activeZone === 0 ? 'border-sky-500 bg-sky-50/70 shadow-xs' : 'border-slate-200 bg-white'}`}
               >
                 <div>
-                  <div className="text-[9px] font-mono text-cyan-400 font-bold">[ZONE 1] QR / BADGE ID</div>
-                  <div className="text-xs font-mono font-bold text-white">H2S-BDG-2026-000381</div>
+                  <div className="text-[9px] font-mono text-sky-700 font-bold">[ZONE 1] QR / BADGE ID</div>
+                  <div className="text-xs font-mono font-bold text-slate-900">H2S-BDG-2026-000381</div>
                 </div>
-                <QrCode className="w-5 h-5 text-cyan-400" />
+                <QrCode className="w-5 h-5 text-sky-700" />
               </div>
 
               {/* Zone 2: Reference Color Scale */}
               <div 
                 onClick={() => setActiveZone(1)}
-                className={`p-2.5 rounded-xl border transition cursor-pointer ${activeZone === 1 ? 'border-sky-400 bg-sky-950/30 shadow-lg shadow-sky-500/10' : 'border-gray-700 bg-gray-900/50 hover:border-gray-600'}`}
+                className={`p-2.5 rounded-xl border transition cursor-pointer ${activeZone === 1 ? 'border-sky-500 bg-sky-50/70 shadow-xs' : 'border-slate-200 bg-white hover:border-slate-300'}`}
               >
-                <div className="flex items-center justify-between text-[9px] font-mono text-gray-400 mb-1.5">
-                  <span className="font-bold text-sky-400">[ZONE 2] REFERENCE COLOR SCALE</span>
+                <div className="flex items-center justify-between text-[9px] font-mono text-slate-500 mb-1.5 font-semibold">
+                  <span className="font-bold text-sky-700">[ZONE 2] REFERENCE COLOR SCALE</span>
                   <span>7 PATCHES</span>
                 </div>
                 <div className="grid grid-cols-7 gap-1 h-6">
                   {['0', '50', '100', '200', '400', '800', '1600'].map((val, i) => (
-                    <div key={val} className="rounded-sm flex items-center justify-center text-[7px] text-black font-bold" style={{ backgroundColor: ['#dcd6c0', '#d8cd7a', '#caa357', '#c18f65', '#ad7475', '#906d7f', '#6e4a5d'][i] }}>
+                    <div key={val} className="rounded-sm flex items-center justify-center text-[7px] text-slate-900 font-bold font-mono" style={{ backgroundColor: ['#dcd6c0', '#d8cd7a', '#caa357', '#c18f65', '#ad7475', '#906d7f', '#6e4a5d'][i] }}>
                       {val}
                     </div>
                   ))}
@@ -285,15 +282,15 @@ export const LandingView: React.FC<LandingViewProps> = ({
               {/* Zone 3: Long Rectangular Reaction Strip */}
               <div 
                 onClick={() => setActiveZone(2)}
-                className={`p-3 rounded-xl border transition cursor-pointer ${activeZone === 2 ? 'border-amber-400 bg-amber-950/30 shadow-lg shadow-amber-500/10' : 'border-gray-700 bg-gray-900/50 hover:border-gray-600'}`}
+                className={`p-3 rounded-xl border transition cursor-pointer ${activeZone === 2 ? 'border-amber-500 bg-amber-50/70 shadow-xs' : 'border-slate-200 bg-white hover:border-slate-300'}`}
               >
-                <div className="flex items-center justify-between text-[9px] font-mono text-amber-400 font-bold mb-1.5">
+                <div className="flex items-center justify-between text-[9px] font-mono text-amber-700 font-bold mb-1.5">
                   <span>[ZONE 3] LONG RECTANGULAR REACTION STRIP</span>
-                  <span className="text-gray-400">Aspect ~ 4:1</span>
+                  <span className="text-slate-400 font-normal">Aspect ~ 4:1</span>
                 </div>
-                <div className="h-8 rounded-lg bg-gray-900 border border-amber-900 flex items-center overflow-hidden p-0.5">
-                  <div className="w-1/4 h-full bg-gray-300 flex items-center justify-center text-[7px] text-gray-900 font-bold font-mono">BASE</div>
-                  <div className="w-3/4 h-full bg-gradient-to-r from-amber-600 to-purple-900 flex items-center justify-center text-[8px] text-white font-bold font-mono">
+                <div className="h-8 rounded-lg bg-slate-900 border border-slate-800 flex items-center overflow-hidden p-0.5">
+                  <div className="w-1/4 h-full bg-slate-200 flex items-center justify-center text-[7px] text-slate-900 font-bold font-mono">BASE</div>
+                  <div className="w-3/4 h-full bg-gradient-to-r from-amber-600 to-amber-900 flex items-center justify-center text-[8px] text-white font-bold font-mono">
                     ━━━━ REACTED CHEMICAL STRIP ━━━━
                   </div>
                 </div>
@@ -302,16 +299,16 @@ export const LandingView: React.FC<LandingViewProps> = ({
               {/* Zone 4: Expiry Indicator */}
               <div 
                 onClick={() => setActiveZone(3)}
-                className={`p-2 rounded-xl border transition cursor-pointer flex items-center justify-between ${activeZone === 3 ? 'border-emerald-400 bg-emerald-950/30 shadow-lg shadow-emerald-500/10' : 'border-gray-700 bg-gray-900/50 hover:border-gray-600'}`}
+                className={`p-2 rounded-xl border transition cursor-pointer flex items-center justify-between ${activeZone === 3 ? 'border-emerald-500 bg-emerald-50/70 shadow-xs' : 'border-slate-200 bg-white hover:border-slate-300'}`}
               >
-                <div className="text-[8px] font-mono text-emerald-400 font-bold">[ZONE 4] EXPIRY INDICATOR</div>
+                <div className="text-[8px] font-mono text-emerald-700 font-bold">[ZONE 4] EXPIRY INDICATOR</div>
                 <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded-full bg-emerald-500 flex items-center justify-center text-[8px] text-black font-black">✓</div>
-                  <span className="text-[10px] font-bold text-white font-mono">ACTIVE (VALID)</span>
+                  <div className="w-4 h-4 rounded-full bg-emerald-500 flex items-center justify-center text-[8px] text-white font-black">✓</div>
+                  <span className="text-[10px] font-bold text-slate-900 font-mono">ACTIVE (VALID)</span>
                 </div>
               </div>
             </div>
-            <p className="text-[11px] text-figma-textMuted text-center mt-4">
+            <p className="text-[11px] text-slate-500 text-center mt-3 font-sans">
               Click any zone above to inspect its optical/chemical function
             </p>
           </div>
@@ -322,16 +319,16 @@ export const LandingView: React.FC<LandingViewProps> = ({
               <div
                 key={idx}
                 onClick={() => setActiveZone(idx)}
-                className={`p-5 rounded-2xl border transition cursor-pointer ${activeZone === idx ? `bg-figma-card ${zone.color} shadow-lg` : 'bg-figma-card/50 border-figma-border/70 hover:border-figma-border'}`}
+                className={`p-4 rounded-2xl border transition cursor-pointer ${activeZone === idx ? `${zone.color} shadow-xs` : 'bg-white border-slate-200 hover:border-slate-300'}`}
               >
                 <div className="flex items-center justify-between mb-1">
-                  <h3 className="text-sm font-bold text-white font-mono">{zone.title}</h3>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-white/5 text-figma-textSecondary border border-white/10">
+                  <h3 className="text-sm font-bold text-slate-900 font-sans">{zone.title}</h3>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-600 font-semibold shadow-xs">
                     {zone.tag}
                   </span>
                 </div>
-                <p className="text-xs text-cyan-300 mb-2 font-medium">{zone.role}</p>
-                <p className="text-xs text-figma-textSecondary leading-relaxed">
+                <p className="text-xs text-sky-700 mb-1 font-semibold">{zone.role}</p>
+                <p className="text-xs text-slate-600 leading-relaxed">
                   {zone.description}
                 </p>
               </div>
@@ -341,35 +338,35 @@ export const LandingView: React.FC<LandingViewProps> = ({
       </section>
 
       {/* Occupational Health & Safety Reference Section */}
-      <section className="px-6 py-16 max-w-7xl mx-auto border-t border-figma-border/60">
+      <section className="px-6 py-14 max-w-7xl mx-auto border-t border-slate-200">
         <div className="text-center max-w-2xl mx-auto mb-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-950/50 border border-red-500/40 text-red-300 text-xs font-mono font-bold mb-3">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-50 border border-red-200 text-red-700 text-xs font-mono font-bold mb-2">
             <HeartPulse className="w-3.5 h-3.5" />
             <span>Industrial Hygiene Intelligence</span>
           </div>
-          <h2 className="text-3xl font-black text-white font-mono uppercase">Occupational Health Reference Guide</h2>
-          <p className="text-sm text-figma-textSecondary mt-2">
-            Standard airborne concentration benchmarks and physiological impacts. Concentration and duration both govern toxicological response.
+          <h2 className="text-3xl font-black text-slate-900 font-sans tracking-tight">Occupational Health Reference Guide</h2>
+          <p className="text-sm text-slate-500 mt-1">
+            Standard airborne concentration benchmarks and physiological impacts.
           </p>
         </div>
 
         {/* Health Reference Table */}
-        <div className="rounded-2xl border border-figma-border bg-figma-card overflow-hidden shadow-xl mb-6">
+        <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-xs mb-6">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs font-mono">
-              <thead className="bg-black/60 border-b border-figma-border text-gray-300 uppercase text-[10px]">
+            <table className="w-full text-left text-xs font-sans">
+              <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 uppercase text-[10px] font-mono">
                 <tr>
                   <th className="p-3.5">Airborne H₂S</th>
                   <th className="p-3.5">Benchmark</th>
                   <th className="p-3.5">Occupational & Health Significance</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-figma-border/40 text-figma-textSecondary">
+              <tbody className="divide-y divide-slate-100 text-slate-700">
                 {healthThresholds.map((row, idx) => (
-                  <tr key={idx} className="hover:bg-white/5 transition">
-                    <td className="p-3.5 font-bold text-white whitespace-nowrap">{row.range}</td>
-                    <td className="p-3.5 text-cyan-300 whitespace-nowrap">{row.severity}</td>
-                    <td className="p-3.5 leading-relaxed">{row.description}</td>
+                  <tr key={idx} className="hover:bg-slate-50 transition">
+                    <td className="p-3.5 font-bold font-mono text-slate-900 whitespace-nowrap">{row.range}</td>
+                    <td className="p-3.5 text-sky-700 font-semibold whitespace-nowrap">{row.severity}</td>
+                    <td className="p-3.5 leading-relaxed text-slate-600">{row.description}</td>
                   </tr>
                 ))}
               </tbody>
@@ -378,21 +375,21 @@ export const LandingView: React.FC<LandingViewProps> = ({
         </div>
 
         {/* Odor Warning Callout Banner */}
-        <div className="p-4 rounded-2xl bg-amber-950/40 border-2 border-amber-500/50 text-amber-200 text-xs font-mono flex items-start gap-3">
-          <AlertOctagon className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
-          <div className="space-y-1">
-            <div className="font-bold text-amber-300 uppercase tracking-wide">Critical Safety Note — Olfactory Fatigue</div>
-            <p className="text-amber-200/90 leading-relaxed">
+        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-start gap-3">
+          <AlertOctagon className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+          <div className="space-y-0.5">
+            <div className="font-bold text-amber-800 uppercase tracking-wide font-mono">Critical Safety Note — Olfactory Fatigue</div>
+            <p className="text-amber-800/90 leading-relaxed font-sans">
               Do not rely on the rotten-egg odor of H₂S as a safety indicator. The sense of smell can rapidly fatigue at elevated exposure, creating a false perception of safety.
             </p>
           </div>
         </div>
 
         {/* Prototype Status / Limitations Disclosure Accordion */}
-        <div className="mt-8 p-6 rounded-2xl bg-figma-card/80 border border-figma-border">
+        <div className="mt-6 p-5 rounded-2xl bg-white border border-slate-200 shadow-xs">
           <button
             onClick={() => setShowTechnicalDetails(!showTechnicalDetails)}
-            className="w-full flex items-center justify-between text-left text-xs font-mono font-bold text-cyan-400"
+            className="w-full flex items-center justify-between text-left text-xs font-mono font-bold text-sky-700"
           >
             <div className="flex items-center gap-2">
               <Info className="w-4 h-4" />
@@ -402,15 +399,15 @@ export const LandingView: React.FC<LandingViewProps> = ({
           </button>
 
           {showTechnicalDetails && (
-            <div className="mt-4 pt-4 border-t border-figma-border text-xs text-figma-textSecondary space-y-3">
+            <div className="mt-3 pt-3 border-t border-slate-100 text-xs text-slate-600 space-y-2">
               <p>
-                <strong className="text-white">Calibration Version:</strong> Currently operating on model <code className="text-cyan-400 font-mono">CAL-v0.1-demo</code>. Quantitative dosimetric values in demo mode are computed using deterministic kinetic formulations.
+                <strong className="text-slate-900">Calibration Version:</strong> Currently operating on model <code className="text-sky-700 font-mono font-bold">CAL-v0.1-demo</code>. Quantitative dosimetric values in demo mode are computed using deterministic kinetic formulations.
               </p>
               <p>
-                <strong className="text-white">Physical Validation:</strong> Full industrial regulatory deployment requires multi-point gas-chamber exposure testing with calibrated gas concentrations (0.25 to 15.0 ppm) across varying humidity and temperature profiles.
+                <strong className="text-slate-900">Physical Validation:</strong> Full industrial regulatory deployment requires multi-point gas-chamber exposure testing with calibrated gas concentrations (0.25 to 15.0 ppm) across varying humidity and temperature profiles.
               </p>
               <p>
-                <strong className="text-white">Device Classification:</strong> H2Sentry is a passive cumulative exposure dosimeter system. It is <strong className="text-white">NOT</strong> an instantaneous real-time detector, not a replacement for mandatory real-time electronic alarms, and not a medical diagnostic device.
+                <strong className="text-slate-900">Device Classification:</strong> H2Sentry is a passive cumulative exposure dosimeter system. It is <strong className="text-slate-900">NOT</strong> an instantaneous real-time detector, not a replacement for mandatory real-time electronic alarms, and not a medical diagnostic device.
               </p>
             </div>
           )}
@@ -418,10 +415,10 @@ export const LandingView: React.FC<LandingViewProps> = ({
       </section>
 
       {/* Call to Action Footer */}
-      <footer className="px-6 py-12 max-w-7xl mx-auto border-t border-figma-border/60 flex flex-col sm:flex-row items-center justify-between gap-6">
+      <footer className="px-6 py-10 max-w-7xl mx-auto border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
         <div>
-          <div className="text-sm font-bold text-white font-mono">H2Sentry — Passive Exposure Intelligence</div>
-          <p className="text-xs text-figma-textMuted">
+          <div className="text-sm font-bold text-slate-900 font-mono">H2Sentry — Passive Exposure Intelligence</div>
+          <p className="text-xs text-slate-500">
             SIH 2026 Problem Statement SIH26118 | Mangalore Refinery and Petrochemicals Limited (MRPL)
           </p>
         </div>
@@ -429,13 +426,13 @@ export const LandingView: React.FC<LandingViewProps> = ({
         <div className="flex items-center gap-3">
           <button
             onClick={onLaunchWorker}
-            className="px-5 py-2.5 rounded-xl bg-cyan-400 text-black text-xs font-bold hover:bg-cyan-300 transition shadow-md shadow-cyan-500/20 uppercase tracking-wider"
+            className="px-5 py-2.5 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition shadow-xs uppercase tracking-wider"
           >
             Open Worker Demo
           </button>
           <button
             onClick={onLaunchSupervisor}
-            className="px-5 py-2.5 rounded-xl bg-figma-card hover:bg-figma-cardHover border border-figma-border text-xs font-semibold text-white transition"
+            className="px-5 py-2.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-700 transition shadow-xs"
           >
             Supervisor View
           </button>
